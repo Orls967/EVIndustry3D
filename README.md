@@ -2,6 +2,8 @@
 
 An interactive, browser-only demonstrator that compares two **generic reference** EV battery packs — an LFP blade-type cell-to-pack design and an NMC 4680-type cylindrical array — in 3D, simulates their thermal behaviour during charging, projects an illustrative state-of-health (SoH) trend, and supports a simple maintenance-versus-replacement cost decision.
 
+**Live demo:** https://orls967.github.io/EVIndustry3D/
+
 > **Academic / portfolio demonstrator.** The packs are generic designs built from published literature. They are not replicas of any real vehicle pack. Thermal results are *modelled and not yet validated against pack measurements*; SoH projections are *illustrative*. Every parameter in the app is either sourced or visibly labelled as assumed (see the Methodology page).
 
 ## What it does
