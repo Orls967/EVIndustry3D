@@ -90,12 +90,14 @@ export const SelectablePart = React.memo(function SelectablePart({
       roughness,
       metalness,
       transparent: true, // constant: dimming only changes opacity (no shader recompile)
-      opacity: dimmed ? 0.35 : 1.0,
+      // Heatmap "X-ray": casings turn see-through so the coloured cells inside stay visible
+      opacity: heatmapEnabled ? 0.12 : dimmed ? 0.35 : 1.0,
+      depthWrite: !heatmapEnabled,
       forceSinglePass: true,
       clippingPlanes,
       side,
     }),
-    [color, roughness, metalness, dimmed, clippingPlanes, side]
+    [color, roughness, metalness, dimmed, heatmapEnabled, clippingPlanes, side]
   );
 
   // Subtle always-on CAD edge lines (same clipping as the part, hidden while dimmed)

@@ -80,8 +80,9 @@ export function LidDetails({
     [clippingPlanes]
   );
   useLayoutEffect(() => {
-    boltMat.opacity = dimmed ? 0.35 : 1;
-  }, [boltMat, dimmed]);
+    boltMat.opacity = heatmapEnabled ? 0.12 : dimmed ? 0.35 : 1;
+    boltMat.depthWrite = !heatmapEnabled;
+  }, [boltMat, dimmed, heatmapEnabled]);
 
   useLayoutEffect(() => {
     const mesh = boltRef.current;

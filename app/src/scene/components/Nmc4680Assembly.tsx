@@ -81,8 +81,11 @@ export const Nmc4680Assembly = React.memo(function Nmc4680Assembly({
   // Dimming mutates opacity on the same material (no new material => no shader recompile)
   useLayoutEffect(() => {
     cellMat.opacity = cellsDimmed ? 0.35 : 1.0;
+    // Matte cells while the heatmap is on, so reflections do not wash out the temperature colours
+    cellMat.metalness = heatmapEnabled ? 0.05 : 0.74;
+    cellMat.roughness = heatmapEnabled ? 0.7 : 0.32;
     invalidate();
-  }, [cellMat, cellsDimmed, invalidate]);
+  }, [cellMat, cellsDimmed, heatmapEnabled, invalidate]);
 
   useEffect(() => {
     return () => {
