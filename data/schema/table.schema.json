@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ev-pack-twin.local/schema/table.schema.json",
+  "title": "LookupTable",
+  "type": "object",
+  "required": ["tableId", "kind", "architecture", "unit", "sourceRef", "scriptPath", "generatedAtIso", "approximate", "estimatedErrorNote"],
+  "properties": {
+    "tableId": { "type": "string", "minLength": 1 },
+    "kind": { "type": "string", "enum": ["R_DC_2D", "OCV_1D", "ENTROPIC_1D"] },
+    "architecture": { "type": "string", "enum": ["LFP_BLADE", "NMC_4680"] },
+    "unit": { "type": "string", "minLength": 1 },
+    "sourceRef": { "type": "string", "minLength": 1 },
+    "proxyCellNote": { "type": "string" },
+    "scriptPath": { "type": "string", "minLength": 1 },
+    "generatedAtIso": { "type": "string", "minLength": 1 },
+    "approximate": { "type": "boolean" },
+    "estimatedErrorNote": { "type": "string", "minLength": 1 },
+    "socGridPercent": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0, "maximum": 100 },
+      "minItems": 2
+    },
+    "temperatureGridC": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2
+    },
+    "values": {
+      "type": "array",
+      "minItems": 2
+    }
+  }
+}
+

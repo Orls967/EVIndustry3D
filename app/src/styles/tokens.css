@@ -1,0 +1,69 @@
+:root {
+  /* Foundation palette (02-design-system.md §2.1) */
+  --color-bg-base: #0b0d10;
+  --color-bg-raised: #12161b;
+  --color-surface-1: #181d23;
+  --color-surface-2: #1f262e;
+  --color-border-subtle: #2a323c;
+  --color-border-control: #6e7a88;
+  --color-text-primary: #e8edf2;
+  --color-text-secondary: #a3afbd;
+  --color-text-muted: #8a96a4;
+  --color-accent-primary: #38c7e0;
+  --color-accent-secondary: #2fb8a6;
+  --color-accent-on-primary: #06181c;
+  --color-focus-ring: #9be7f5;
+
+  /* Status palette — never used as thermal colour (§2.2) */
+  --color-status-info: #7fb2ff;
+  --color-status-warning: #f2b441;
+  --color-status-danger: #f0625a;
+  --color-status-neutral: #a3afbd;
+
+  /* Thermal scale — heatmap, temperature legend, temperature charts only (§2.4) */
+  --color-thermal-0: #3b6fe0;
+  --color-thermal-1: #3fbf7f;
+  --color-thermal-2: #f2d13d;
+  --color-thermal-3: #f28c28;
+  --color-thermal-4: #e5484d;
+
+  /* Typography (§3) */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Spacing scale (§4) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  /* Radii & borders (§4) */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --border-width: 1px;
+  --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  /* Layout metrics (§4 & 01 §5.1) */
+  --content-max-width: 1200px;
+  --topbar-height: 56px;
+  --panel-left-width: 280px;
+  --panel-right-width: 380px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

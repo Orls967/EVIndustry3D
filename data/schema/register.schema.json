@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ev-pack-twin.local/schema/register.schema.json",
+  "title": "ParameterRegister",
+  "type": "object",
+  "required": ["parameterSetVersion", "lastReviewedDate", "coolant", "presets", "parameters"],
+  "properties": {
+    "parameterSetVersion": { "type": "string", "minLength": 1 },
+    "lastReviewedDate": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "coolant": {
+      "type": "object",
+      "required": ["name", "specificHeatJPerKgK", "conductivityWPerMK", "densityKgPerM3", "viscosityPaS", "inletTempDefaultC", "flowRangeLpm", "sourceRef"],
+      "properties": {
+        "name": { "type": "string" },
+        "specificHeatJPerKgK": { "type": "number", "exclusiveMinimum": 0 },
+        "conductivityWPerMK": { "type": "number", "exclusiveMinimum": 0 },
+        "densityKgPerM3": { "type": "number", "exclusiveMinimum": 0 },
+        "viscosityPaS": { "type": "number", "exclusiveMinimum": 0 },
+        "inletTempDefaultC": { "type": "number" },
+        "flowRangeLpm": {
+          "type": "array",
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "sourceRef": { "type": "string" }
+      }
+    },
+    "presets": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "chargingPowerKw", "ambientTemperatureC", "coolantFlowLpm", "coolantInletTemperatureC", "initialSocPercent", "targetSocPercent", "maxDurationMinutes"],
+        "properties": {
+          "id": { "type": "string", "enum": ["normal", "hot_ambient", "fast_charging", "reduced_cooling"] },
+          "label": { "type": "string" },
+          "chargingPowerKw": { "type": "number", "minimum": 10, "maximum": 150 },
+          "ambientTemperatureC": { "type": "number", "minimum": -10, "maximum": 45 },
+          "coolantFlowLpm": { "type": "number", "exclusiveMinimum": 0 },
+          "coolantInletTemperatureC": { "type": "number" },
+          "initialSocPercent": { "type": "number", "minimum": 0, "maximum": 95 },
+          "targetSocPercent": { "type": "number", "minimum": 5, "maximum": 100 },
+          "maxDurationMinutes": { "type": "number", "minimum": 1, "maximum": 180 }
+        }
+      }
+    },
+    "parameters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "symbol", "value", "unit", "status", "sourceRef", "conditionOrAssumption", "applicability", "confidenceNote", "lastReviewedDate"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "symbol": { "type": "string" },
+          "value": {},
+          "unit": { "type": "string" },
+          "status": { "type": "string", "enum": ["SOURCED", "DIGITIZED", "DERIVED", "ASSUMED"] },
+          "sourceRef": { "type": "string", "minLength": 1 },
+          "conditionOrAssumption": { "type": "string", "minLength": 1 },
+          "applicability": { "type": "string", "minLength": 1 },
+          "confidenceNote": { "type": "string", "minLength": 1 },
+          "lastReviewedDate": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+        }
+      }
+    }
+  }
+}
+

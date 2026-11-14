@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ev-pack-twin.local/schema/vectors.schema.json",
+  "title": "CrossLanguageTestVectors",
+  "type": "object",
+  "required": ["vectorSetVersion", "generatedBy", "generatedAtIso", "thermalVectors", "sohVectors"],
+  "properties": {
+    "vectorSetVersion": { "type": "string", "minLength": 1 },
+    "generatedBy": { "type": "string", "minLength": 1 },
+    "generatedAtIso": { "type": "string", "minLength": 1 },
+    "thermalVectors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "config", "expected"],
+        "properties": {
+          "id": { "type": "string" },
+          "config": { "type": "object" },
+          "expected": {
+            "type": "object",
+            "required": [
+              "maxTemperatureC",
+              "averageTemperatureC",
+              "temperatureSpreadC",
+              "hottestZoneId",
+              "energyBalanceErrorPercent",
+              "finalZoneTemperaturesC"
+            ]
+          }
+        }
+      }
+    },
+    "sohVectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "config", "expectedPoints"]
+      }
+    }
+  }
+}
+

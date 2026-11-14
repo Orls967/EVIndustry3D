@@ -1,0 +1,409 @@
+{
+  "generatedAtIso": "2026-11-14T16:13:55+00:00",
+  "verification": {
+    "V1": {
+      "passed": true,
+      "maxEnergyBalanceErrPct": 0.0
+    },
+    "V2": {
+      "passed": true,
+      "simTempC": 26.99314,
+      "analyticSteadyTempC": 26.99314,
+      "absDeltaC": 0.0
+    },
+    "V3": {
+      "passed": true,
+      "deltasC": {
+        "LFP_BLADE": 0.0,
+        "NMC_4680": 5e-07
+      }
+    },
+    "V4": {
+      "passed": true
+    },
+    "V5": {
+      "passed": true,
+      "flowSweepMaxTempC": {
+        "LFP_BLADE": [
+          40.00412,
+          35.3888,
+          32.67006,
+          31.6246,
+          31.07397
+        ],
+        "NMC_4680": [
+          40.79816,
+          34.62574,
+          32.1461,
+          31.23003,
+          30.75452
+        ]
+      },
+      "ambientSweepMaxTempC": {
+        "LFP_BLADE": [
+          28.30935,
+          30.69844,
+          32.67006,
+          40.0
+        ],
+        "NMC_4680": [
+          28.19775,
+          30.36045,
+          32.1461,
+          40.0
+        ]
+      }
+    }
+  },
+  "publishedWeakChecks": {
+    "P1": {
+      "passed": true,
+      "socGrid": [
+        20,
+        35,
+        50,
+        70,
+        90
+      ],
+      "lfpSpecificHeatingWPerDm3": [
+        17.12,
+        16.14,
+        15.47,
+        15.17,
+        14.32
+      ],
+      "nmcSpecificHeatingWPerDm3": [
+        32.46,
+        29.91,
+        29.27,
+        29.61,
+        32.91
+      ]
+    },
+    "P2": {
+      "passed": true,
+      "ratioBySoc": [
+        1.896,
+        1.852,
+        1.892,
+        1.952,
+        2.298
+      ],
+      "meanRatio": 1.978
+    },
+    "P3": {
+      "passed": true,
+      "meanHeatW": 13.19,
+      "peakHeatW": 14.81,
+      "finalTempC": 70.47,
+      "seriesTimeS": [
+        0.0,
+        30.0,
+        60.0,
+        90.0,
+        120.0,
+        150.0,
+        180.0,
+        210.0,
+        240.0,
+        270.0,
+        300.0,
+        330.0,
+        360.0,
+        390.0,
+        420.0,
+        450.0,
+        480.0,
+        510.0,
+        540.0,
+        570.0,
+        600.0,
+        630.0,
+        660.0,
+        690.0,
+        720.0,
+        750.0,
+        780.0,
+        810.0,
+        840.0,
+        870.0,
+        900.0,
+        930.0,
+        960.0,
+        990.0,
+        1020.0,
+        1050.0,
+        1080.0,
+        1110.0,
+        1140.0,
+        1170.0,
+        1200.0,
+        1230.0,
+        1260.0,
+        1290.0,
+        1320.0,
+        1350.0,
+        1380.0,
+        1410.0,
+        1440.0,
+        1470.0,
+        1500.0,
+        1530.0,
+        1560.0,
+        1590.0,
+        1620.0,
+        1650.0,
+        1680.0,
+        1710.0,
+        1740.0,
+        1770.0,
+        1800.0
+      ],
+      "seriesTempC": [
+        25.0,
+        26.173,
+        27.32,
+        28.441,
+        29.537,
+        30.61,
+        31.66,
+        32.689,
+        33.7,
+        34.696,
+        35.676,
+        36.641,
+        37.591,
+        38.526,
+        39.435,
+        40.316,
+        41.176,
+        42.019,
+        42.845,
+        43.654,
+        44.447,
+        45.223,
+        45.983,
+        46.729,
+        47.466,
+        48.193,
+        48.922,
+        49.674,
+        50.447,
+        51.243,
+        52.061,
+        52.9,
+        53.753,
+        54.591,
+        55.409,
+        56.209,
+        56.99,
+        57.752,
+        58.496,
+        59.209,
+        59.887,
+        60.53,
+        61.139,
+        61.714,
+        62.256,
+        62.781,
+        63.301,
+        63.818,
+        64.332,
+        64.842,
+        65.349,
+        65.854,
+        66.362,
+        66.873,
+        67.387,
+        67.905,
+        68.426,
+        68.948,
+        69.465,
+        69.973,
+        70.474
+      ]
+    }
+  },
+  "kThroughPlaneSensitivity": {
+    "LFP_BLADE": {
+      "low_0.15": {
+        "maxTempC": 42.314,
+        "spreadC": 5.127
+      },
+      "nominal_0.61": {
+        "maxTempC": 42.313,
+        "spreadC": 5.124
+      },
+      "high_1.40": {
+        "maxTempC": 42.311,
+        "spreadC": 5.121
+      }
+    },
+    "NMC_4680": {
+      "low_0.15": {
+        "maxTempC": 42.088,
+        "spreadC": 5.298
+      },
+      "nominal_0.61": {
+        "maxTempC": 42.087,
+        "spreadC": 5.293
+      },
+      "high_1.40": {
+        "maxTempC": 42.084,
+        "spreadC": 5.285
+      }
+    }
+  },
+  "schimpeF9Sanity": {
+    "uaAt50PctV": 0.1233,
+    "uaRefDeltaV": 0.0003,
+    "lossAt2800Fec1Yr25CPct": 9.494,
+    "schimpeSanityPassed": true
+  },
+  "presetsSummary": [
+    {
+      "packId": "LFP_BLADE",
+      "presetId": "normal",
+      "durationMin": 44.62,
+      "finalSocPct": 80.0,
+      "cRateStart": 0.964,
+      "reynoldsNumber": 228.9,
+      "maxTempC": 32.67,
+      "avgTempC": 30.884,
+      "spreadC": 3.561,
+      "hottestZone": "pack.zone_10",
+      "outletTempC": 29.479,
+      "energyBalanceErrPct": 0.0,
+      "warnings": [
+        "RESISTANCE_TABLE_OUT_OF_RANGE"
+      ],
+      "stopReason": "TARGET_SOC_REACHED"
+    },
+    {
+      "packId": "LFP_BLADE",
+      "presetId": "hot_ambient",
+      "durationMin": 44.62,
+      "finalSocPct": 80.0,
+      "cRateStart": 0.964,
+      "reynoldsNumber": 228.9,
+      "maxTempC": 43.011,
+      "avgTempC": 40.986,
+      "spreadC": 3.845,
+      "hottestZone": "pack.zone_10",
+      "outletTempC": 39.576,
+      "energyBalanceErrPct": 0.0,
+      "warnings": [
+        "RESISTANCE_TABLE_OUT_OF_RANGE"
+      ],
+      "stopReason": "TARGET_SOC_REACHED"
+    },
+    {
+      "packId": "LFP_BLADE",
+      "presetId": "fast_charging",
+      "durationMin": 22.31,
+      "finalSocPct": 80.0,
+      "cRateStart": 1.927,
+      "reynoldsNumber": 343.35,
+      "maxTempC": 42.313,
+      "avgTempC": 39.859,
+      "spreadC": 5.124,
+      "hottestZone": "pack.zone_10",
+      "outletTempC": 33.495,
+      "energyBalanceErrPct": 0.0,
+      "warnings": [
+        "RESISTANCE_TABLE_OUT_OF_RANGE"
+      ],
+      "stopReason": "TARGET_SOC_REACHED"
+    },
+    {
+      "packId": "LFP_BLADE",
+      "presetId": "reduced_cooling",
+      "durationMin": 44.62,
+      "finalSocPct": 80.0,
+      "cRateStart": 0.964,
+      "reynoldsNumber": 42.92,
+      "maxTempC": 43.412,
+      "avgTempC": 37.796,
+      "spreadC": 14.15,
+      "hottestZone": "pack.zone_10",
+      "outletTempC": 42.951,
+      "energyBalanceErrPct": 0.0,
+      "warnings": [
+        "RESISTANCE_TABLE_OUT_OF_RANGE"
+      ],
+      "stopReason": "TARGET_SOC_REACHED"
+    },
+    {
+      "packId": "NMC_4680",
+      "presetId": "normal",
+      "durationMin": 58.74,
+      "finalSocPct": 80.0,
+      "cRateStart": 0.819,
+      "reynoldsNumber": 267.05,
+      "maxTempC": 32.146,
+      "avgTempC": 30.056,
+      "spreadC": 2.98,
+      "hottestZone": "pack.zone_12",
+      "outletTempC": 28.368,
+      "energyBalanceErrPct": 0.0,
+      "warnings": [
+        "RESISTANCE_TABLE_OUT_OF_RANGE"
+      ],
+      "stopReason": "TARGET_SOC_REACHED"
+    },
+    {
+      "packId": "NMC_4680",
+      "presetId": "hot_ambient",
+      "durationMin": 58.74,
+      "finalSocPct": 80.0,
+      "cRateStart": 0.819,
+      "reynoldsNumber": 267.05,
+      "maxTempC": 42.402,
+      "avgTempC": 40.072,
+      "spreadC": 3.098,
+      "hottestZone": "pack.zone_12",
+      "outletTempC": 38.385,
+      "energyBalanceErrPct": 0.0,
+      "warnings": [
+        "RESISTANCE_TABLE_OUT_OF_RANGE"
+      ],
+      "stopReason": "TARGET_SOC_REACHED"
+    },
+    {
+      "packId": "NMC_4680",
+      "presetId": "fast_charging",
+      "durationMin": 29.37,
+      "finalSocPct": 80.0,
+      "cRateStart": 1.638,
+      "reynoldsNumber": 400.57,
+      "maxTempC": 42.087,
+      "avgTempC": 39.355,
+      "spreadC": 5.293,
+      "hottestZone": "pack.zone_12",
+      "outletTempC": 32.077,
+      "energyBalanceErrPct": 0.0,
+      "warnings": [
+        "RESISTANCE_TABLE_OUT_OF_RANGE"
+      ],
+      "stopReason": "TARGET_SOC_REACHED"
+    },
+    {
+      "packId": "NMC_4680",
+      "presetId": "reduced_cooling",
+      "durationMin": 58.74,
+      "finalSocPct": 80.0,
+      "cRateStart": 0.819,
+      "reynoldsNumber": 50.07,
+      "maxTempC": 43.023,
+      "avgTempC": 36.568,
+      "spreadC": 14.223,
+      "hottestZone": "pack.zone_12",
+      "outletTempC": 41.662,
+      "energyBalanceErrPct": 0.0,
+      "warnings": [
+        "RESISTANCE_TABLE_OUT_OF_RANGE"
+      ],
+      "stopReason": "TARGET_SOC_REACHED"
+    }
+  ]
+}

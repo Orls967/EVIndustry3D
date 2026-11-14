@@ -1,0 +1,38 @@
+{
+  "tableId": "entropic_lfp_proxy",
+  "kind": "ENTROPIC_1D",
+  "architecture": "LFP_BLADE",
+  "unit": "mV/K",
+  "sourceRef": "F7 Figure 3 (Giammichele et al. 2024); F8 cross-check for NMC",
+  "proxyCellNote": "Proxy cell: LFP 26650 (100% SOC clamped to 90% endpoint)",
+  "scriptPath": "analysis/digitize/extract_f7.py",
+  "generatedAtIso": "2026-11-14T10:51:29Z",
+  "approximate": false,
+  "estimatedErrorNote": "Extracted directly from PDF vector scatter centers; F7 EHC measurement uncertainty +/-0.016 mV/K.",
+  "socGridPercent": [
+    0,
+    10,
+    20,
+    30,
+    40,
+    50,
+    60,
+    70,
+    80,
+    90,
+    100
+  ],
+  "values": [
+    -0.5519,
+    -0.3088,
+    -0.0817,
+    0.0253,
+    0.0649,
+    0.2173,
+    0.2207,
+    0.1843,
+    0.0627,
+    0.034,
+    0.034
+  ]
+}

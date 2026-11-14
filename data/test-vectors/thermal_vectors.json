@@ -1,0 +1,248 @@
+{
+  "vectorSetVersion": "1.0.0",
+  "generatedBy": "analysis/validation/run_checks.py",
+  "generatedAtIso": "2026-11-14T16:13:55+00:00",
+  "thermalVectors": [
+    {
+      "id": "lfp_normal",
+      "config": {
+        "packId": "LFP_BLADE",
+        "chargingPowerKw": 50.0,
+        "ambientTemperatureC": 25.0,
+        "coolantFlowLpm": 8.0,
+        "coolantInletTemperatureC": 25.0,
+        "initialSocPercent": 10.0,
+        "targetSocPercent": 80.0,
+        "maxDurationMinutes": 60.0,
+        "dtS": 1.0
+      },
+      "expected": {
+        "maxTemperatureC": 32.6701,
+        "averageTemperatureC": 30.8836,
+        "temperatureSpreadC": 3.5609,
+        "hottestZoneId": "pack.zone_10",
+        "energyBalanceErrorPercent": 0.0,
+        "finalZoneTemperaturesC": [
+          29.0391,
+          29.4758,
+          29.9038,
+          30.3214,
+          30.7283,
+          31.1245,
+          31.51,
+          31.8845,
+          32.2483,
+          32.5999
+        ],
+        "reynoldsNumber": 228.899,
+        "finalSocPercent": 80.0,
+        "durationSeconds": 2677.3779,
+        "warnings": [
+          "RESISTANCE_TABLE_OUT_OF_RANGE"
+        ]
+      }
+    },
+    {
+      "id": "lfp_fast_charging",
+      "config": {
+        "packId": "LFP_BLADE",
+        "chargingPowerKw": 100.0,
+        "ambientTemperatureC": 25.0,
+        "coolantFlowLpm": 12.0,
+        "coolantInletTemperatureC": 25.0,
+        "initialSocPercent": 10.0,
+        "targetSocPercent": 80.0,
+        "maxDurationMinutes": 45.0,
+        "dtS": 1.0
+      },
+      "expected": {
+        "maxTemperatureC": 42.3131,
+        "averageTemperatureC": 39.859,
+        "temperatureSpreadC": 5.1245,
+        "hottestZoneId": "pack.zone_10",
+        "energyBalanceErrorPercent": 0.0,
+        "finalZoneTemperaturesC": [
+          37.1886,
+          37.8361,
+          38.462,
+          39.0652,
+          39.6462,
+          40.2082,
+          40.7604,
+          41.2961,
+          41.8142,
+          42.3131
+        ],
+        "reynoldsNumber": 343.349,
+        "finalSocPercent": 80.0,
+        "durationSeconds": 1338.6889,
+        "warnings": [
+          "RESISTANCE_TABLE_OUT_OF_RANGE"
+        ]
+      }
+    },
+    {
+      "id": "lfp_reduced_cooling",
+      "config": {
+        "packId": "LFP_BLADE",
+        "chargingPowerKw": 50.0,
+        "ambientTemperatureC": 30.0,
+        "coolantFlowLpm": 1.5,
+        "coolantInletTemperatureC": 25.0,
+        "initialSocPercent": 10.0,
+        "targetSocPercent": 80.0,
+        "maxDurationMinutes": 60.0,
+        "dtS": 1.0
+      },
+      "expected": {
+        "maxTemperatureC": 43.4125,
+        "averageTemperatureC": 37.7958,
+        "temperatureSpreadC": 14.1495,
+        "hottestZoneId": "pack.zone_10",
+        "energyBalanceErrorPercent": 0.0,
+        "finalZoneTemperaturesC": [
+          29.263,
+          31.8022,
+          34.1316,
+          36.2122,
+          38.0265,
+          39.5708,
+          40.8617,
+          41.9181,
+          42.7593,
+          43.4125
+        ],
+        "reynoldsNumber": 42.919,
+        "finalSocPercent": 80.0,
+        "durationSeconds": 2677.3779,
+        "warnings": [
+          "RESISTANCE_TABLE_OUT_OF_RANGE"
+        ]
+      }
+    },
+    {
+      "id": "nmc_normal",
+      "config": {
+        "packId": "NMC_4680",
+        "chargingPowerKw": 50.0,
+        "ambientTemperatureC": 25.0,
+        "coolantFlowLpm": 8.0,
+        "coolantInletTemperatureC": 25.0,
+        "initialSocPercent": 10.0,
+        "targetSocPercent": 80.0,
+        "maxDurationMinutes": 60.0,
+        "dtS": 1.0
+      },
+      "expected": {
+        "maxTemperatureC": 32.1461,
+        "averageTemperatureC": 30.0563,
+        "temperatureSpreadC": 2.9798,
+        "hottestZoneId": "pack.zone_12",
+        "energyBalanceErrorPercent": 0.0,
+        "finalZoneTemperaturesC": [
+          28.5477,
+          28.8261,
+          29.1053,
+          29.3828,
+          29.6585,
+          29.9323,
+          30.2041,
+          30.4738,
+          30.7413,
+          31.0064,
+          31.2692,
+          31.5275
+        ],
+        "reynoldsNumber": 267.049,
+        "finalSocPercent": 80.0,
+        "durationSeconds": 3524.4489,
+        "warnings": [
+          "RESISTANCE_TABLE_OUT_OF_RANGE"
+        ]
+      }
+    },
+    {
+      "id": "nmc_fast_charging",
+      "config": {
+        "packId": "NMC_4680",
+        "chargingPowerKw": 100.0,
+        "ambientTemperatureC": 25.0,
+        "coolantFlowLpm": 12.0,
+        "coolantInletTemperatureC": 25.0,
+        "initialSocPercent": 10.0,
+        "targetSocPercent": 80.0,
+        "maxDurationMinutes": 45.0,
+        "dtS": 1.0
+      },
+      "expected": {
+        "maxTemperatureC": 42.0867,
+        "averageTemperatureC": 39.3554,
+        "temperatureSpreadC": 5.2931,
+        "hottestZoneId": "pack.zone_12",
+        "energyBalanceErrorPercent": 0.0,
+        "finalZoneTemperaturesC": [
+          36.6774,
+          37.1825,
+          37.6825,
+          38.1742,
+          38.6576,
+          39.1327,
+          39.5996,
+          40.077,
+          40.5616,
+          41.0394,
+          41.5101,
+          41.9704
+        ],
+        "reynoldsNumber": 400.574,
+        "finalSocPercent": 80.0,
+        "durationSeconds": 1762.2245,
+        "warnings": [
+          "RESISTANCE_TABLE_OUT_OF_RANGE"
+        ]
+      }
+    },
+    {
+      "id": "nmc_reduced_cooling",
+      "config": {
+        "packId": "NMC_4680",
+        "chargingPowerKw": 50.0,
+        "ambientTemperatureC": 30.0,
+        "coolantFlowLpm": 1.5,
+        "coolantInletTemperatureC": 25.0,
+        "initialSocPercent": 10.0,
+        "targetSocPercent": 80.0,
+        "maxDurationMinutes": 60.0,
+        "dtS": 1.0
+      },
+      "expected": {
+        "maxTemperatureC": 43.0233,
+        "averageTemperatureC": 36.5684,
+        "temperatureSpreadC": 14.2234,
+        "hottestZoneId": "pack.zone_12",
+        "energyBalanceErrorPercent": 0.0,
+        "finalZoneTemperaturesC": [
+          28.7999,
+          30.3965,
+          31.9676,
+          33.4905,
+          34.9533,
+          36.3464,
+          37.6619,
+          38.8941,
+          40.0426,
+          41.1244,
+          42.1203,
+          43.0233
+        ],
+        "reynoldsNumber": 50.072,
+        "finalSocPercent": 80.0,
+        "durationSeconds": 3524.4489,
+        "warnings": [
+          "RESISTANCE_TABLE_OUT_OF_RANGE"
+        ]
+      }
+    }
+  ],
+  "sohVectors": []
+}

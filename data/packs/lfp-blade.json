@@ -1,0 +1,485 @@
+{
+  "id": "LFP_BLADE",
+  "displayName": "Generic LFP Blade Pack (120s1p)",
+  "description": "Generic cell-to-pack prismatic LFP blade architecture with top liquid cold plate, inspired by commercial blade CTP layouts using S15 cell parameters.",
+  "provenanceNote": "Cell dimensions, mass, capacity, nominal voltage, and R_dc are SOURCED from S15. Specific heat (F1), coolant (F2), Nusselt (F13), OCV/EHC (F7 proxy), and SoH (F9) are SOURCED/DIGITIZED. Pack series count (120s1p), zone count (10), gaps, and channel dimensions are ASSUMED design values.",
+  "cell": {
+    "formFactor": "PRISMATIC_BLADE",
+    "dimensionsMm": [
+      965.0,
+      90.0,
+      14.0
+    ],
+    "massKg": 2.7,
+    "nominalCapacityAh": 135.0,
+    "nominalVoltageV": 3.2,
+    "specificHeatJPerKgK": 1041.0,
+    "specificHeatTempCoeffPctPerK": 0.2,
+    "kThroughPlaneWPerMK": 0.61,
+    "kInPlaneWPerMK": 30.5,
+    "sourceRefs": [
+      "S15 Table 1",
+      "F1 (c_cell=1041, +0.2%/K, k_perp=0.61, k_par=21-40.1)"
+    ]
+  },
+  "seriesCount": 120,
+  "parallelCount": 1,
+  "envelopeMm": {
+    "lengthX": 1820.0,
+    "heightY": 140.0,
+    "widthZ": 1020.0,
+    "interCellGapMm": 0.8,
+    "enclosureWallMm": 12.0,
+    "timThicknessMm": 1.5,
+    "timConductivityWPerMK": 3.0,
+    "provenance": "ASSUMED"
+  },
+  "cooling": {
+    "topology": "TOP_COLD_PLATE",
+    "channelWidthMm": 24.0,
+    "channelHeightMm": 3.0,
+    "parallelChannels": 14,
+    "nusseltNumber": 5.597,
+    "nusseltBoundaryCondition": "UNIFORM_WALL_TEMP",
+    "contactAreaPerZoneM2": 0.16212,
+    "rZoneToCoolantBaseKW": 0.003158,
+    "rZoneToZoneKW": 3.6132,
+    "rZoneToAmbientKW": 0.4545,
+    "provenance": "ASSUMED"
+  },
+  "zones": [
+    {
+      "id": "pack.zone_01",
+      "cellCount": 12,
+      "order": 1,
+      "thermalMassJPerK": 33728.4
+    },
+    {
+      "id": "pack.zone_02",
+      "cellCount": 12,
+      "order": 2,
+      "thermalMassJPerK": 33728.4
+    },
+    {
+      "id": "pack.zone_03",
+      "cellCount": 12,
+      "order": 3,
+      "thermalMassJPerK": 33728.4
+    },
+    {
+      "id": "pack.zone_04",
+      "cellCount": 12,
+      "order": 4,
+      "thermalMassJPerK": 33728.4
+    },
+    {
+      "id": "pack.zone_05",
+      "cellCount": 12,
+      "order": 5,
+      "thermalMassJPerK": 33728.4
+    },
+    {
+      "id": "pack.zone_06",
+      "cellCount": 12,
+      "order": 6,
+      "thermalMassJPerK": 33728.4
+    },
+    {
+      "id": "pack.zone_07",
+      "cellCount": 12,
+      "order": 7,
+      "thermalMassJPerK": 33728.4
+    },
+    {
+      "id": "pack.zone_08",
+      "cellCount": 12,
+      "order": 8,
+      "thermalMassJPerK": 33728.4
+    },
+    {
+      "id": "pack.zone_09",
+      "cellCount": 12,
+      "order": 9,
+      "thermalMassJPerK": 33728.4
+    },
+    {
+      "id": "pack.zone_10",
+      "cellCount": 12,
+      "order": 10,
+      "thermalMassJPerK": 33728.4
+    }
+  ],
+  "coolantPath": [
+    "pack.zone_01",
+    "pack.zone_02",
+    "pack.zone_03",
+    "pack.zone_04",
+    "pack.zone_05",
+    "pack.zone_06",
+    "pack.zone_07",
+    "pack.zone_08",
+    "pack.zone_09",
+    "pack.zone_10"
+  ],
+  "components": [
+    {
+      "id": "pack.upper_enclosure",
+      "name": "Upper enclosure (lid)",
+      "category": "Structure",
+      "func": "Seals the battery pack against dust and moisture and protects top BMS and cooling hardware.",
+      "material": "Stamped aluminum alloy shell (generic)",
+      "location": "Top perimeter over BMS, busbars, and cold plate",
+      "parameters": [
+        {
+          "label": "Envelope (L x W x H)",
+          "value": "1820 x 1020 x 140",
+          "unit": "mm",
+          "sourceRef": "ASSUMED"
+        },
+        {
+          "label": "Shell thickness",
+          "value": "3.0",
+          "unit": "mm",
+          "sourceRef": "ASSUMED"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Perimeter gasket compression loss",
+          "effect": "Ingress risk for moisture and dust into pack cavity."
+        },
+        {
+          "mode": "Impact denting",
+          "effect": "Reduced internal clearance above cold plate and HV busbars."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 1,
+        "offsetM": [
+          0.0,
+          0.42,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.bms",
+      "name": "Battery management unit (BMS)",
+      "category": "Electronics",
+      "func": "Monitors cell group voltages, temperatures, and contactor state; coordinates charging current requests.",
+      "material": "Aluminum housing with conformal-coated PCB",
+      "location": "Front upper shelf above cold plate manifold",
+      "parameters": [
+        {
+          "label": "Monitored series groups",
+          "value": "120",
+          "unit": "count",
+          "sourceRef": "ASSUMED"
+        },
+        {
+          "label": "Thermal zone sensors",
+          "value": "10",
+          "unit": "zones",
+          "sourceRef": "ASSUMED"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Sense harness / NTC drift",
+          "effect": "Inaccurate SOC balancing or false over-temperature derating."
+        },
+        {
+          "mode": "Contactor weld",
+          "effect": "Inability to isolate HV pack on fault."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 2,
+        "offsetM": [
+          0.0,
+          0.28,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.busbars",
+      "name": "HV interconnect busbars",
+      "category": "Electrical",
+      "func": "Connects the 120 blade cells in series and routes pack charge current to the main terminals.",
+      "material": "Nickel-plated copper / aluminum bar (generic)",
+      "location": "Along both Z-sides at blade cell terminal headers",
+      "parameters": [
+        {
+          "label": "Series configuration",
+          "value": "120s1p",
+          "unit": "topology",
+          "sourceRef": "05 \u00a71"
+        },
+        {
+          "label": "Pack nominal voltage",
+          "value": "384.0",
+          "unit": "V",
+          "sourceRef": "S15 Table 1 x 120s"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Laser weld / bolt joint resistance rise",
+          "effect": "Localized I^2 R heating near terminal zones."
+        },
+        {
+          "mode": "Insulation abrasion",
+          "effect": "HV isolation fault against enclosure."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 2,
+        "offsetM": [
+          0.0,
+          0.28,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.cooling_plate",
+      "name": "Top liquid cold plate",
+      "category": "Thermal",
+      "func": "Extracts heat from the top edges of all 120 blade cells through internal rectangular EG/water channels.",
+      "material": "Brazed 6061/3003 aluminum cold plate",
+      "location": "Directly above TIM slab spanning zones 01 to 10",
+      "parameters": [
+        {
+          "label": "Channel cross-section (a x b)",
+          "value": "24.0 x 3.0",
+          "unit": "mm",
+          "sourceRef": "ASSUMED (F13 a=8b)"
+        },
+        {
+          "label": "Parallel channels",
+          "value": "14",
+          "unit": "count",
+          "sourceRef": "ASSUMED"
+        },
+        {
+          "label": "Laminar Nu_Dh (T-const)",
+          "value": "5.597",
+          "unit": "-",
+          "sourceRef": "F13 Table 7.4"
+        },
+        {
+          "label": "Derived h_cc",
+          "value": "437.6",
+          "unit": "W/(m^2.K)",
+          "sourceRef": "DERIVED (F2, F13)"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Internal channel fouling / air lock",
+          "effect": "Reduced effective flow and elevated downstream zone temperatures."
+        },
+        {
+          "mode": "Coolant leak at braze seam",
+          "effect": "Loss of coolant pressure and HV dielectric risk."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 3,
+        "offsetM": [
+          0.0,
+          0.17,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.coolant_inlet",
+      "name": "Coolant inlet port",
+      "category": "Thermal",
+      "func": "Feeds chilled 50 wt% ethylene glycol/water coolant into zone 01 of the top cold plate.",
+      "material": "Aluminum quick-connect manifold spigot",
+      "location": "Zone 01 (-X) end of top cold plate",
+      "parameters": [
+        {
+          "label": "Coolant",
+          "value": "50 wt% EG/water",
+          "unit": "-",
+          "sourceRef": "F2"
+        },
+        {
+          "label": "Default inlet T",
+          "value": "25.0",
+          "unit": "C",
+          "sourceRef": "ASSUMED (F3 match)"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Quick-connector O-ring weep",
+          "effect": "Gradual coolant volume loss and air entrainment."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 3,
+        "offsetM": [
+          0.0,
+          0.17,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.coolant_outlet",
+      "name": "Coolant outlet port",
+      "category": "Thermal",
+      "func": "Returns warmed coolant from zone 10 back to the vehicle thermal management loop.",
+      "material": "Aluminum quick-connect manifold spigot",
+      "location": "Zone 10 (+X) end of top cold plate",
+      "parameters": [
+        {
+          "label": "Exit zone",
+          "value": "pack.zone_10",
+          "unit": "-",
+          "sourceRef": "ASSUMED"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Flow restriction / valve sticking",
+          "effect": "Elevated outlet and cell temperatures across trailing zones."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 3,
+        "offsetM": [
+          0.0,
+          0.17,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.thermal_interface",
+      "name": "Thermal interface layer (TIM)",
+      "category": "Thermal",
+      "func": "Eliminates air gaps between blade cell top faces and the cold plate while providing electrical isolation.",
+      "material": "Dielectric silicone gap pad (k = 3.0 W/(m.K) assumed)",
+      "location": "Sandwiched between blade cell top edges and cold plate underside",
+      "parameters": [
+        {
+          "label": "Thickness",
+          "value": "1.5",
+          "unit": "mm",
+          "sourceRef": "ASSUMED"
+        },
+        {
+          "label": "Conductivity",
+          "value": "3.0",
+          "unit": "W/(m.K)",
+          "sourceRef": "ASSUMED"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Pad pump-out or dry-out",
+          "effect": "Increases R_cc and raises peak cell temperature."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 4,
+        "offsetM": [
+          0.0,
+          0.08,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.cells",
+      "name": "LFP blade cell array (120 cells)",
+      "category": "Electrochemical",
+      "func": "Stores 51.84 kWh nominally in 120 series LFP/graphite prismatic blade cells across 10 thermal zones.",
+      "material": "LiFePO4 / graphite prismatic blade cells",
+      "location": "Cell-to-pack bay inside lower tray",
+      "parameters": [
+        {
+          "label": "Dimensions (L x H x T)",
+          "value": "965 x 90 x 14",
+          "unit": "mm",
+          "sourceRef": "S15 Table 1"
+        },
+        {
+          "label": "Capacity / Voltage",
+          "value": "135 Ah / 3.2 V",
+          "unit": "per cell",
+          "sourceRef": "S15 Table 1"
+        },
+        {
+          "label": "Mass / c_p",
+          "value": "2.7 kg / 1041 J/(kg.K)",
+          "unit": "per cell",
+          "sourceRef": "S15 Table 1; F1"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "SEI growth & lithium plating at low T / high SOC",
+          "effect": "Irreversible capacity fade and impedance growth (F9)."
+        },
+        {
+          "mode": "Stack pressure relaxation",
+          "effect": "Uneven interfacial contact and resistance spread."
+        }
+      ],
+      "provenance": "SOURCED",
+      "explode": {
+        "stage": 5,
+        "offsetM": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.lower_enclosure",
+      "name": "Lower structural tray",
+      "category": "Structure",
+      "func": "Supports cell stack weight, absorbs underbody road loads, and anchors mounting cross-members.",
+      "material": "Extruded aluminum tray with cross-members (generic)",
+      "location": "Base reference frame (y <= 0)",
+      "parameters": [
+        {
+          "label": "Base thickness",
+          "value": "10.0",
+          "unit": "mm",
+          "sourceRef": "ASSUMED"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Underbody impact distortion",
+          "effect": "Can compress cells or compromise bottom clearance."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 0,
+        "offsetM": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    }
+  ]
+}

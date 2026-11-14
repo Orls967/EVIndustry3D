@@ -1,0 +1,28 @@
+# Dependencies & virtual environments
+node_modules/
+analysis/.venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Build & generated tool outputs
+app/dist/
+app/test-results/
+app/playwright-report/
+engine/target/
+engine/wasm/pkg/
+
+# Local environment & OS files
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+
+
+# Third-party source documents (cited in docs, not redistributed)
+docs/research/*.pdf
+
+# Tool caches
+.pytest_cache/
+*.tsbuildinfo

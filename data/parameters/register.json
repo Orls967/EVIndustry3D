@@ -1,0 +1,318 @@
+{
+  "parameterSetVersion": "1.0.0",
+  "lastReviewedDate": "2026-11-14",
+  "coolant": {
+    "name": "50 wt% ethylene glycol / water at 25 C baseline",
+    "specificHeatJPerKgK": 3488.0,
+    "conductivityWPerMK": 0.417,
+    "densityKgPerM3": 1061.0,
+    "viscosityPaS": 0.00327,
+    "inletTempDefaultC": 25.0,
+    "flowRangeLpm": [
+      1.0,
+      20.0
+    ],
+    "sourceRef": "F2 (Yaws / Engineering ToolBox 50 wt% EG correlations at 25 C; water check 4186 J/(kg.K), 0.603 W/(m.K))"
+  },
+  "presets": [
+    {
+      "id": "normal",
+      "label": "Normal",
+      "chargingPowerKw": 50.0,
+      "ambientTemperatureC": 25.0,
+      "coolantFlowLpm": 8.0,
+      "coolantInletTemperatureC": 25.0,
+      "initialSocPercent": 10.0,
+      "targetSocPercent": 80.0,
+      "maxDurationMinutes": 60.0
+    },
+    {
+      "id": "hot_ambient",
+      "label": "Hot ambient",
+      "chargingPowerKw": 50.0,
+      "ambientTemperatureC": 40.0,
+      "coolantFlowLpm": 8.0,
+      "coolantInletTemperatureC": 35.0,
+      "initialSocPercent": 10.0,
+      "targetSocPercent": 80.0,
+      "maxDurationMinutes": 60.0
+    },
+    {
+      "id": "fast_charging",
+      "label": "Fast charging",
+      "chargingPowerKw": 100.0,
+      "ambientTemperatureC": 25.0,
+      "coolantFlowLpm": 12.0,
+      "coolantInletTemperatureC": 25.0,
+      "initialSocPercent": 10.0,
+      "targetSocPercent": 80.0,
+      "maxDurationMinutes": 45.0
+    },
+    {
+      "id": "reduced_cooling",
+      "label": "Reduced cooling",
+      "chargingPowerKw": 50.0,
+      "ambientTemperatureC": 30.0,
+      "coolantFlowLpm": 1.5,
+      "coolantInletTemperatureC": 25.0,
+      "initialSocPercent": 10.0,
+      "targetSocPercent": 80.0,
+      "maxDurationMinutes": 60.0
+    }
+  ],
+  "parameters": [
+    {
+      "id": "cell.lfp.capacity",
+      "name": "LFP blade cell nominal capacity",
+      "symbol": "Q_cell,LFP",
+      "value": 135.0,
+      "unit": "Ah",
+      "status": "SOURCED",
+      "sourceRef": "S15 Table 1 (Link et al. 2023)",
+      "conditionOrAssumption": "Room-temperature rated capacity from Table 1.",
+      "applicability": "LFP blade pack",
+      "confidenceNote": "Manufacturer/literature measured value.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "cell.nmc.capacity",
+      "name": "NMC 4680 cell nominal capacity",
+      "symbol": "Q_cell,NMC",
+      "value": 23.125,
+      "unit": "Ah",
+      "status": "SOURCED",
+      "sourceRef": "S15 Table 1 (Tesla 4680 measured)",
+      "conditionOrAssumption": "Measured capacity from Table 1 (S1 notes 22.078 Ah variant on separate sample).",
+      "applicability": "NMC 4680 pack",
+      "confidenceNote": "Measured in S15; consistent with r_dc_nmc 1C reference current.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "cell.lfp.specific_heat",
+      "name": "LFP prismatic cell specific heat capacity",
+      "symbol": "c_p,LFP",
+      "value": 1041.0,
+      "unit": "J/(kg.K)",
+      "status": "SOURCED",
+      "sourceRef": "F1 (Steinhardt et al. 2022) format median; +0.2%/K temp slope",
+      "conditionOrAssumption": "Median of 52 full-cell calorimetric measurements by format at ~25 C.",
+      "applicability": "LFP blade pack",
+      "confidenceNote": "Prismatic LFP entries span 1048-1174 J/(kg.K); format median 1041 used cleanly with F1 +0.2%/K temperature coefficient.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "cell.nmc.specific_heat",
+      "name": "NMC cylindrical cell specific heat capacity",
+      "symbol": "c_p,NMC",
+      "value": 912.0,
+      "unit": "J/(kg.K)",
+      "status": "SOURCED",
+      "sourceRef": "F1 (Steinhardt et al. 2022) cylindrical format median; +0.2%/K temp slope",
+      "conditionOrAssumption": "Median across cylindrical full cells; applied to 4680 cell mass 0.355 kg (S15/S1).",
+      "applicability": "NMC 4680 pack",
+      "confidenceNote": "Format median carries cell-to-cell spread; check P3 against S1 uncooled heating.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "cell.conductivity_through_plane",
+      "name": "Cell through-plane thermal conductivity",
+      "symbol": "k_perp",
+      "value": 0.61,
+      "unit": "W/(m.K)",
+      "status": "SOURCED",
+      "sourceRef": "F1 (Steinhardt et al. 2022)",
+      "conditionOrAssumption": "Full-cell median across jelly-roll/stack layers; published spread 0.15-1.4 W/(m.K).",
+      "applicability": "Both packs (inter-zone R_zz)",
+      "confidenceNote": "+/-81% uncertainty reported in F1; sensitivity checked in M1.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "coolant.eg50.properties",
+      "name": "50 wt% ethylene glycol/water coolant properties at 25 C",
+      "symbol": "c_p, k, rho, mu",
+      "value": {
+        "c_p": 3488.0,
+        "k": 0.417,
+        "rho": 1061.0,
+        "mu": 0.00327
+      },
+      "unit": "SI (J/(kg.K), W/(m.K), kg/m^3, Pa.s)",
+      "status": "SOURCED",
+      "sourceRef": "F2 (Yaws / Engineering ToolBox 50 wt% EG correlations at 25 C)",
+      "conditionOrAssumption": "Constant fluid properties evaluated at 25 C nominal inlet.",
+      "applicability": "Both packs",
+      "confidenceNote": "Pure water check reproduces 4186 J/(kg.K) and 0.603 W/(m.K).",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "cooling.nusselt_a8b",
+      "name": "Laminar fully developed Nusselt number (a=8b rectangular duct, constant T_w)",
+      "symbol": "Nu_Dh",
+      "value": 5.597,
+      "unit": "-",
+      "status": "SOURCED",
+      "sourceRef": "F13 Table 7.4 & Eq. 7.61 (Lienhard & Lienhard v6.00)",
+      "conditionOrAssumption": "Fully developed laminar flow (Re < 950 per F3, < 2300 general), uniform wall temperature conservative bound.",
+      "applicability": "Both packs",
+      "confidenceNote": "Runtime flags NON_LAMINAR_COOLANT_F3 at Re >= 950 and TRANSITIONAL_OR_TURBULENT_RE at Re >= 2300.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "cooling.h_amb",
+      "name": "Ambient natural convection coefficient",
+      "symbol": "h_amb",
+      "value": 5.0,
+      "unit": "W/(m^2.K)",
+      "status": "SOURCED",
+      "sourceRef": "F3 (cold-plate EV pack thermal study assumption)",
+      "conditionOrAssumption": "Constant ambient heat transfer coefficient over pack exterior surface.",
+      "applicability": "Both packs",
+      "confidenceNote": "Study-specific assumption; pack heat removal is dominated by liquid cooling.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "cooling.lfp.r_zz_and_r_amb",
+      "name": "LFP zone-to-zone and ambient resistances",
+      "symbol": "R_zz, R_amb",
+      "value": {
+        "rZoneToZoneKW": 3.6132,
+        "rZoneToAmbientKW": 0.4545,
+        "rZoneToCoolantBaseKW": 0.003158
+      },
+      "unit": "K/W",
+      "status": "DERIVED",
+      "sourceRef": "Derived from F1 k_perp, F3 h_amb, and assumed pack/TIM geometry",
+      "conditionOrAssumption": "10 zones x 12 blade cells; 1.5 mm TIM (3.0 W/(m.K)); 14 channels (24 x 3 mm).",
+      "applicability": "LFP blade pack",
+      "confidenceNote": "Assumed channel & TIM thicknesses dominate R_cc; documented as Assumed.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "cooling.nmc.r_zz_and_r_amb",
+      "name": "NMC 4680 zone-to-zone and ambient resistances",
+      "symbol": "R_zz, R_amb",
+      "value": {
+        "rZoneToZoneKW": 2.6456,
+        "rZoneToAmbientKW": 0.5,
+        "rZoneToCoolantBaseKW": 0.003806
+      },
+      "unit": "K/W",
+      "status": "DERIVED",
+      "sourceRef": "Derived from F1 k_perp, F3 h_amb, and assumed ribbon/TIM geometry",
+      "conditionOrAssumption": "12 zones x 69 cells; 1.0 mm TIM sleeve (2.5 W/(m.K)); 12 channels (24 x 3 mm); 60 deg arc contact.",
+      "applicability": "NMC 4680 pack",
+      "confidenceNote": "Assumed contact arc and TIM thickness.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "pack.lfp.geometry_assumed",
+      "name": "LFP blade pack topology & cooling channel dimensions",
+      "symbol": "N_s, N_zones, a, b, N_ch",
+      "value": {
+        "seriesCount": 120,
+        "zones": 10,
+        "channelWidthMm": 24.0,
+        "channelHeightMm": 3.0,
+        "parallelChannels": 14,
+        "interCellGapMm": 0.8
+      },
+      "unit": "mixed (count, mm)",
+      "status": "ASSUMED",
+      "sourceRef": "Project engineering assumption (05 \u00a71, 06 \u00a73.2, 04 \u00a73)",
+      "conditionOrAssumption": "400V-class 120s1p CTP layout sized so 1-16 L/min sits inside Re < 950 laminar regime.",
+      "applicability": "LFP blade pack",
+      "confidenceNote": "Generic non-OEM geometry.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "pack.nmc.geometry_assumed",
+      "name": "NMC 4680 pack topology & cooling channel dimensions",
+      "symbol": "N_s x N_p, N_zones, a, b, N_ch",
+      "value": {
+        "seriesCount": 92,
+        "parallelCount": 9,
+        "zones": 12,
+        "channelWidthMm": 24.0,
+        "channelHeightMm": 3.0,
+        "parallelChannels": 12,
+        "interCellGapMm": 2.5
+      },
+      "unit": "mixed (count, mm)",
+      "status": "ASSUMED",
+      "sourceRef": "Project engineering assumption (05 \u00a71, 06 \u00a73.2, 04 \u00a73)",
+      "conditionOrAssumption": "36 x 23 upright cylindrical array with side cooling ribbons.",
+      "applicability": "NMC 4680 pack",
+      "confidenceNote": "Generic non-OEM geometry.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "table.r_dc_both",
+      "name": "DC internal resistance tables vs SOC & temperature",
+      "symbol": "R_dc(SOC, T)",
+      "value": {
+        "lfpTable": "data/tables/r_dc_lfp.json",
+        "nmcTable": "data/tables/r_dc_nmc.json"
+      },
+      "unit": "mOhm",
+      "status": "DIGITIZED",
+      "sourceRef": "S15 Figure 8 (18 s pulse resistance at 10, 20, 40 C)",
+      "conditionOrAssumption": "Bilinear lookup across SOC 20-90% and T 10-40 C, clamped at grid boundaries with out-of-range warnings.",
+      "applicability": "Both packs",
+      "confidenceNote": "Overlay verified pixel-accurate; Panel C 1C 20 C cross-check within +/-0.05 mOhm.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "table.ocv_and_entropic_proxy",
+      "name": "Open-circuit voltage & entropic coefficient proxy tables",
+      "symbol": "V_ocv(SOC), dV_ocv/dT(SOC)",
+      "value": {
+        "lfpOcv": "data/tables/ocv_lfp_proxy.json",
+        "lfpEhc": "data/tables/entropic_lfp_proxy.json",
+        "nmcOcv": "data/tables/ocv_nmc_proxy.json",
+        "nmcEhc": "data/tables/entropic_nmc_proxy.json"
+      },
+      "unit": "V, mV/K",
+      "status": "DIGITIZED",
+      "sourceRef": "F7 Figs. 2 & 3 (26650 LFP & 21700 NMC proxy cells); F8 qualitative NMC check",
+      "conditionOrAssumption": "Proxy chemistry curves applied to blade LFP and 4680 NMC.",
+      "applicability": "Both packs",
+      "confidenceNote": "Exact PDF vector coordinates; explicitly labelled PROXY CELL.",
+      "lastReviewedDate": "2026-11-14"
+    },
+    {
+      "id": "soh.lfp.schimpe_2018",
+      "name": "LFP semi-empirical calendar & cycle capacity-loss parameters",
+      "symbol": "Schimpe2018_TableIV",
+      "value": {
+        "kCalRef": 0.0003694,
+        "kCycHighTRef": 0.0001456,
+        "kCycLowTRef": 0.0004009,
+        "kCycLowTHighSocRef": 2.031e-06,
+        "eaCal": 20592.0,
+        "eaCycHighT": 32699.0,
+        "eaCycLowT": 55546.0,
+        "eaCycLowTHighSoc": 233000.0,
+        "alpha": 0.384,
+        "betaLowT": 2.64,
+        "betaLowTHighSoc": 7.84,
+        "tRefK": 298.15,
+        "c0RefAh": 3.0,
+        "iChRefA": 3.0,
+        "uaRefV": 0.123,
+        "k0": 0.142,
+        "socRef": 0.82,
+        "rg": 8.314,
+        "faraday": 96485.0,
+        "xa0": 0.0085,
+        "xa100": 0.78
+      },
+      "unit": "Schimpe 2018 Table IV SI / h^-0.5 / Ah^-0.5 / Ah^-1",
+      "status": "SOURCED",
+      "sourceRef": "F9 (Schimpe et al. 2018, JES 165 A181-A193, Table IV, Eqs. 9-23 & A1-A2)",
+      "conditionOrAssumption": "Fitted on Sony US26650FTC1 3 Ah LFP cell; scaled to arbitrary pack via FEC and C-rate ratio.",
+      "applicability": "LFP blade pack (Illustrative)",
+      "confidenceNote": "Illustrative proxy (26650 LFP cell, not 135 Ah blade cell). NMC uses Option B user-editable inputs with no defaults.",
+      "lastReviewedDate": "2026-11-14"
+    }
+  ]
+}

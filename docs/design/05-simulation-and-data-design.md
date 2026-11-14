@@ -172,6 +172,7 @@ Status values: **Sourced** (value available from a source that was read) · **To
 | Zone thermal mass | C_zone | J/K | LFP 33,728 · NMC 22,339 | Derived **[verified arithmetic]** | n × m_cell × c_cell |
 | Zone-to-zone resistance | R_zz | K/W | — | Derive in Phase 3 | From k_⊥ / k_∥ and geometry |
 | Zone-to-ambient coefficient | h_amb | W/(m²·K) | 5 | Sourced — one study's assumption | F3 |
+| Single-cell still-air coefficient (check P3 only) | h_P3 | W/(m²·K) | 12 | Derived | F13 eqn. 8.13a (natural convection, 4.7–6.6) + eqn. 2.31 (radiation, ε = 0.9 assumed, 5.7–6.7) for ΔT = 10–45 K → 10.3–13.3 |
 | Coolant (50 wt % ethylene glycol, 25 °C) | c_p · k · ρ · μ | — | 3488 J/(kg·K) · 0.417 W/(m·K) · ≈1061 kg/m³ · ≈3.27 mPa·s | Sourced correlations, computed | F2 Figures 7, 8, 9, 17; water check reproduces 4186 J/(kg·K) and 0.603 W/(m·K) |
 | Coolant flow regime | Re | — | Laminar, Re < 950 at 0.05–0.2 m/s | Sourced — for one cold-plate design | F3 |
 | Cell-to-coolant heat transfer | Nu_Dh → h_cc | — | Laminar, fully developed, based on hydraulic diameter: circular 3.657 / 4.364; rectangular a = 4b 4.439 / 5.331; a = 8b 5.597 / 6.490; parallel plates 7.541 / 8.235 (fixed wall temperature / fixed wall flux). h_cc = Nu · k_coolant / D_h; D_h = 2ab/(a + b) | Sourced | F13: Lienhard & Lienhard, *A Heat Transfer Textbook* v6.00, Table 7.4 and eqn. 7.61. Channel dimensions are assumed design values. Thermal-entry correlations (eqn. 7.28) are available if the entry length matters |

@@ -1,0 +1,193 @@
+{
+  "vectorSetVersion": "1.0.0",
+  "generatedBy": "analysis/validation/run_checks.py",
+  "generatedAtIso": "2026-11-14T16:13:55+00:00",
+  "thermalVectors": [
+    {
+      "id": "lfp_normal",
+      "config": {
+        "packId": "LFP_BLADE",
+        "chargingPowerKw": 50.0,
+        "ambientTemperatureC": 25.0,
+        "coolantFlowLpm": 8.0,
+        "coolantInletTemperatureC": 25.0,
+        "initialSocPercent": 10.0,
+        "targetSocPercent": 80.0,
+        "maxDurationMinutes": 60.0,
+        "dtS": 1.0
+      },
+      "expected": {
+        "maxTemperatureC": 32.6701,
+        "averageTemperatureC": 30.8836,
+        "temperatureSpreadC": 3.5609,
+        "hottestZoneId": "pack.zone_10",
+        "energyBalanceErrorPercent": 0.0,
+        "finalZoneTemperaturesC": [
+          29.0391,
+          29.4758,
+          29.9038,
+          30.3214,
+          30.7283,
+          31.1245,
+          31.51,
+          31.8845,
+          32.2483,
+          32.5999
+        ],
+        "reynoldsNumber": 228.899,
+        "finalSocPercent": 80.0,
+        "durationSeconds": 2677.3779,
+        "warnings": [
+          "RESISTANCE_TABLE_OUT_OF_RANGE"
+        ]
+      }
+    }
+  ],
+  "sohVectors": [
+    {
+      "id": "soh_lfp_8yr_30c_300fec",
+      "config": {
+        "chemistry": "LFP",
+        "initialSohPct": 100.0,
+        "eolThresholdPct": 80.0,
+        "horizonYears": 8,
+        "cyclesPerYear": 300.0,
+        "avgCRateCh": 1.0,
+        "dodPct": 70.0,
+        "avgRestSocPct": 50.0,
+        "representativeTempC": 30.0,
+        "maxChargeSocPct": 80.0
+      },
+      "expectedPoints": [
+        {
+          "year": 0.0,
+          "sohPct": 100.0,
+          "sohLowTempPct": 100.0,
+          "sohHighTempPct": 100.0
+        },
+        {
+          "year": 1.0,
+          "sohPct": 93.8909,
+          "sohLowTempPct": 94.2469,
+          "sohHighTempPct": 93.3215
+        },
+        {
+          "year": 2.0,
+          "sohPct": 91.3604,
+          "sohLowTempPct": 91.8639,
+          "sohHighTempPct": 90.5551
+        },
+        {
+          "year": 3.0,
+          "sohPct": 89.4187,
+          "sohLowTempPct": 90.0353,
+          "sohHighTempPct": 88.4324
+        },
+        {
+          "year": 4.0,
+          "sohPct": 87.7817,
+          "sohLowTempPct": 88.4938,
+          "sohHighTempPct": 86.6429
+        },
+        {
+          "year": 5.0,
+          "sohPct": 86.3396,
+          "sohLowTempPct": 87.1356,
+          "sohHighTempPct": 85.0663
+        },
+        {
+          "year": 6.0,
+          "sohPct": 85.0357,
+          "sohLowTempPct": 85.9078,
+          "sohHighTempPct": 83.641
+        },
+        {
+          "year": 7.0,
+          "sohPct": 83.8367,
+          "sohLowTempPct": 84.7787,
+          "sohHighTempPct": 82.3302
+        },
+        {
+          "year": 8.0,
+          "sohPct": 82.7207,
+          "sohLowTempPct": 83.7277,
+          "sohHighTempPct": 81.1102
+        }
+      ]
+    },
+    {
+      "id": "soh_nmc_option_b_8yr",
+      "config": {
+        "chemistry": "NMC",
+        "initialSohPct": 100.0,
+        "eolThresholdPct": 80.0,
+        "horizonYears": 8,
+        "cyclesPerYear": 300.0,
+        "representativeTempC": 32.0,
+        "nmcUserInputs": {
+          "calendarLossPctPerSqrtYear": 1.5,
+          "cycleLossPctPerFec": 0.004,
+          "cycleExponent": 1.0,
+          "activationEnergyJPerMol": 25000.0,
+          "referenceTempC": 25.0
+        }
+      },
+      "expectedPoints": [
+        {
+          "year": 0.0,
+          "sohPct": 100.0,
+          "sohLowTempPct": 100.0,
+          "sohHighTempPct": 100.0
+        },
+        {
+          "year": 1.0,
+          "sohPct": 96.5972,
+          "sohLowTempPct": 97.1123,
+          "sohHighTempPct": 96.0113
+        },
+        {
+          "year": 2.0,
+          "sohPct": 94.3017,
+          "sohLowTempPct": 95.1644,
+          "sohHighTempPct": 93.3207
+        },
+        {
+          "year": 3.0,
+          "sohPct": 92.1885,
+          "sohLowTempPct": 93.3711,
+          "sohHighTempPct": 90.8436
+        },
+        {
+          "year": 4.0,
+          "sohPct": 90.1696,
+          "sohLowTempPct": 91.6578,
+          "sohHighTempPct": 88.4771
+        },
+        {
+          "year": 5.0,
+          "sohPct": 88.211,
+          "sohLowTempPct": 89.9957,
+          "sohHighTempPct": 86.1812
+        },
+        {
+          "year": 6.0,
+          "sohPct": 86.2951,
+          "sohLowTempPct": 88.3699,
+          "sohHighTempPct": 83.9355
+        },
+        {
+          "year": 7.0,
+          "sohPct": 84.4117,
+          "sohLowTempPct": 86.7716,
+          "sohHighTempPct": 81.7278
+        },
+        {
+          "year": 8.0,
+          "sohPct": 82.554,
+          "sohLowTempPct": 85.1951,
+          "sohHighTempPct": 79.5503
+        }
+      ]
+    }
+  ]
+}

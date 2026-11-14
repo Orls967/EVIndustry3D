@@ -1,0 +1,38 @@
+{
+  "tableId": "ocv_lfp_proxy",
+  "kind": "OCV_1D",
+  "architecture": "LFP_BLADE",
+  "unit": "V",
+  "sourceRef": "F7 Figure 2 (Giammichele et al. 2024)",
+  "proxyCellNote": "Proxy cell: LFP 26650",
+  "scriptPath": "analysis/digitize/extract_f7.py",
+  "generatedAtIso": "2026-11-14T10:51:29Z",
+  "approximate": false,
+  "estimatedErrorNote": "Extracted directly from PDF vector scatter centers; measurement uncertainty +/-0.3 mV (F7 Table 2 / Sec. 3).",
+  "socGridPercent": [
+    0,
+    10,
+    20,
+    30,
+    40,
+    50,
+    60,
+    70,
+    80,
+    90,
+    100
+  ],
+  "values": [
+    2.8333,
+    3.2033,
+    3.2405,
+    3.2727,
+    3.285,
+    3.287,
+    3.2909,
+    3.312,
+    3.3289,
+    3.3312,
+    3.6
+  ]
+}

@@ -45,9 +45,9 @@ This section is the single record of where the project stands. Claude MUST updat
 
 | Item | State |
 |---|---|
-| Active phase | **Phase 3 — Implementation Planning** (authorized by Gate 2 on 14 November 2026) |
-| Repository | Project folder contains documentation only. No source code. Not a Git repository. No GitHub repository. |
-| Implementation | None. Not authorized. |
+| Active phase | **Phase 6 — Final Delivery & GitHub Pages** (authorized by Gate 4 on 15 November 2026) |
+| Repository | Project folder contains documentation and Phase 4 foundation. Not yet a Git repository (user initializes Git per Q12). No GitHub repository. |
+| Implementation | Authorized for Phase 4 per `docs/plan/01`–`06` (with user review gates at M1–M5). |
 | Research package (Phase 1) | Complete: `docs/research/phase-1-research-package.md` and `docs/design-research/`. Visual evidence is partial — see the evidence index. |
 
 **Approval log**
@@ -56,9 +56,9 @@ This section is the single record of where the project stands. Claude MUST updat
 |---|---|---|---|
 | Gate 0 — Baseline confirmation | **Approved** | 14 November 2026 | User: "Setuju, lanjut riset", in reply to "Is Gate 0 approved with the recommendations for Q1–Q14?". Baseline report: `docs/phase-0-baseline-report.md`. Decisions recorded below. |
 | Gate 1 — Research approval | **Approved** | 14 November 2026 | User: "Setuju, lanjut desain", in reply to "Is Gate 1 approved, with Python used offline?". Decisions D1–D10 in `docs/research/phase-1-research-package.md` §1.3 are approved as recommended, with D7 as amended by the user. |
-| Gate 2 — Design approval | **Approved** | 14 November 2026 | User: "ok sudah diinstal, plankan", in reply to "Is Gate 2 (design) approved with recommendations G2-1 to G2-12?". Interpreted as approval of the design package `docs/design/01`–`07` with the recommendations as written, and as authorization to start Phase 3 planning. G2-9 (reference device) had no recommendation and remains **open**. |
-| Gate 3 — Implementation authorization | Not yet approved | — | — |
-| Gate 4 — Release candidate review | Not yet approved | — | — |
+| Gate 2 — Design approval | **Approved** | 14 November 2026 | User: "ok sudah diinstal, plankan", in reply to "Is Gate 2 (design) approved with recommendations G2-1 to G2-12?". Interpreted as approval of the design package `docs/design/01`–`07` with the recommendations as written, and as authorization to start Phase 3 planning. G2-9 answered at Gate 3. |
+| Gate 3 — Implementation authorization | **Approved** | 14 November 2026 | User approved Phase 3 plan (`docs/plan/01`–`06`) and authorized Phase 4 starting at M0 & M1. `G2-9` set to Desktop only: Apple Silicon Mac (Apple M4, 10-core GPU, macOS 27.0) on Safari/Chrome. `G2-3` confirmed: Option B (user-editable NMC fade inputs with no defaults). |
+| Gate 4 — Release candidate review | **Approved (conditional)** | 15 November 2026 | User: "kalau sudah benar-benar sesuai silahkan dikonekkan lalu dipush semua … urus juga GitHub pages-nya". Condition checked by Claude: all checks re-run and passed (cargo test 4/4, pytest 10/10, vitest 14/14, schemas 11/11, type check, E2E + axe on 6 routes, sub-path build `/EVIndustry3D/`). Same message explicitly authorizes Claude to commit and push **under the user's identity (Orls967) with no Claude co-author trailer**, overriding the Phase 6 rule that only the user commits and pushes. Third-party PDFs removed from the unpushed history at the user's choice; design-research screenshots kept. |
 
 **Decisions already approved** (source: UI/UX Design Specification §2.1)
 

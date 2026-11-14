@@ -1,0 +1,467 @@
+{
+  "id": "NMC_4680",
+  "displayName": "Generic NMC 4680 Pack (92s9p)",
+  "description": "Generic cylindrical 4680 cell-to-pack architecture with side serpentine liquid cooling ribbons, using S15/S1 cell parameters.",
+  "provenanceNote": "Cell dimensions, mass, capacity, nominal voltage, and R_dc are SOURCED from S15/S1. Specific heat (F1), coolant (F2), Nusselt (F13), and OCV/EHC (F7 proxy) are SOURCED/DIGITIZED. Topology (92s9p = 36x23), zone count (12), pitch, and ribbon channels are ASSUMED. NMC SoH fade coefficients use user-editable Option B inputs.",
+  "cell": {
+    "formFactor": "CYLINDRICAL",
+    "dimensionsMm": [
+      46.0,
+      80.0
+    ],
+    "massKg": 0.355,
+    "nominalCapacityAh": 23.125,
+    "nominalVoltageV": 3.7,
+    "specificHeatJPerKgK": 912.0,
+    "specificHeatTempCoeffPctPerK": 0.2,
+    "kThroughPlaneWPerMK": 0.61,
+    "kInPlaneWPerMK": 30.5,
+    "sourceRefs": [
+      "S15 Table 1",
+      "S1",
+      "F1 (c_cell=912, +0.2%/K, k_perp=0.61)"
+    ]
+  },
+  "seriesCount": 92,
+  "parallelCount": 9,
+  "envelopeMm": {
+    "lengthX": 1800.0,
+    "heightY": 125.0,
+    "widthZ": 1160.0,
+    "interCellGapMm": 2.5,
+    "enclosureWallMm": 15.0,
+    "timThicknessMm": 1.0,
+    "timConductivityWPerMK": 2.5,
+    "provenance": "ASSUMED"
+  },
+  "cooling": {
+    "topology": "SIDE_CHANNELS",
+    "channelWidthMm": 24.0,
+    "channelHeightMm": 3.0,
+    "parallelChannels": 12,
+    "nusseltNumber": 5.597,
+    "nusseltBoundaryCondition": "UNIFORM_WALL_TEMP",
+    "contactAreaPerZoneM2": 0.106362,
+    "rZoneToCoolantBaseKW": 0.003806,
+    "rZoneToZoneKW": 2.6456,
+    "rZoneToAmbientKW": 0.5,
+    "provenance": "ASSUMED"
+  },
+  "zones": [
+    {
+      "id": "pack.zone_01",
+      "cellCount": 69,
+      "order": 1,
+      "thermalMassJPerK": 22339.44
+    },
+    {
+      "id": "pack.zone_02",
+      "cellCount": 69,
+      "order": 2,
+      "thermalMassJPerK": 22339.44
+    },
+    {
+      "id": "pack.zone_03",
+      "cellCount": 69,
+      "order": 3,
+      "thermalMassJPerK": 22339.44
+    },
+    {
+      "id": "pack.zone_04",
+      "cellCount": 69,
+      "order": 4,
+      "thermalMassJPerK": 22339.44
+    },
+    {
+      "id": "pack.zone_05",
+      "cellCount": 69,
+      "order": 5,
+      "thermalMassJPerK": 22339.44
+    },
+    {
+      "id": "pack.zone_06",
+      "cellCount": 69,
+      "order": 6,
+      "thermalMassJPerK": 22339.44
+    },
+    {
+      "id": "pack.zone_07",
+      "cellCount": 69,
+      "order": 7,
+      "thermalMassJPerK": 22339.44
+    },
+    {
+      "id": "pack.zone_08",
+      "cellCount": 69,
+      "order": 8,
+      "thermalMassJPerK": 22339.44
+    },
+    {
+      "id": "pack.zone_09",
+      "cellCount": 69,
+      "order": 9,
+      "thermalMassJPerK": 22339.44
+    },
+    {
+      "id": "pack.zone_10",
+      "cellCount": 69,
+      "order": 10,
+      "thermalMassJPerK": 22339.44
+    },
+    {
+      "id": "pack.zone_11",
+      "cellCount": 69,
+      "order": 11,
+      "thermalMassJPerK": 22339.44
+    },
+    {
+      "id": "pack.zone_12",
+      "cellCount": 69,
+      "order": 12,
+      "thermalMassJPerK": 22339.44
+    }
+  ],
+  "coolantPath": [
+    "pack.zone_01",
+    "pack.zone_02",
+    "pack.zone_03",
+    "pack.zone_04",
+    "pack.zone_05",
+    "pack.zone_06",
+    "pack.zone_07",
+    "pack.zone_08",
+    "pack.zone_09",
+    "pack.zone_10",
+    "pack.zone_11",
+    "pack.zone_12"
+  ],
+  "components": [
+    {
+      "id": "pack.upper_enclosure",
+      "name": "Upper enclosure (lid)",
+      "category": "Structure",
+      "func": "Structural lid sealing the 828-cell 4680 array and protecting HV current collectors.",
+      "material": "Stamped aluminum alloy shell (generic)",
+      "location": "Top perimeter over current collectors and BMS",
+      "parameters": [
+        {
+          "label": "Envelope (L x W x H)",
+          "value": "1800 x 1160 x 125",
+          "unit": "mm",
+          "sourceRef": "ASSUMED"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Seal degradation",
+          "effect": "Moisture condensation inside cell bay."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 1,
+        "offsetM": [
+          0.0,
+          0.42,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.bms",
+      "name": "Battery management unit (BMS)",
+      "category": "Electronics",
+      "func": "Supervises 92s9p module string voltages, zone temperatures, and fast-charge contactor limits.",
+      "material": "Aluminum housing with conformal-coated PCB",
+      "location": "Front upper shelf near HV junction",
+      "parameters": [
+        {
+          "label": "Electrical config",
+          "value": "92s9p",
+          "unit": "topology",
+          "sourceRef": "05 \u00a71"
+        },
+        {
+          "label": "Thermal zone sensors",
+          "value": "12",
+          "unit": "zones",
+          "sourceRef": "ASSUMED"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Balance resistor thermal trip",
+          "effect": "Slowed top-balancing near high SOC."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 2,
+        "offsetM": [
+          0.0,
+          0.28,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.busbars",
+      "name": "HV current collector array",
+      "category": "Electrical",
+      "func": "Parallels 9 cells per group and chains 92 groups in series across the top headers.",
+      "material": "Copper/aluminum stamped collector plate (generic)",
+      "location": "Above cell caps across zones 01 to 12",
+      "parameters": [
+        {
+          "label": "Pack nominal voltage",
+          "value": "340.4",
+          "unit": "V",
+          "sourceRef": "S15 Table 1 x 92s"
+        },
+        {
+          "label": "Pack nominal capacity",
+          "value": "208.125",
+          "unit": "Ah",
+          "sourceRef": "S15 Table 1 x 9p"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Parallel tab weld fatigue",
+          "effect": "Current redistribution into neighboring cells."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 2,
+        "offsetM": [
+          0.0,
+          0.28,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.cooling_channels",
+      "name": "Side serpentine cooling ribbons",
+      "category": "Thermal",
+      "func": "Extracts radial heat along the vertical cylindrical walls between cell rows using 12 parallel channels.",
+      "material": "Extruded aluminum flat-tube ribbons",
+      "location": "Snaking along X between pairs of cell rows",
+      "parameters": [
+        {
+          "label": "Channel cross-section (a x b)",
+          "value": "24.0 x 3.0",
+          "unit": "mm",
+          "sourceRef": "ASSUMED (F13 a=8b)"
+        },
+        {
+          "label": "Parallel ribbons",
+          "value": "12",
+          "unit": "count",
+          "sourceRef": "ASSUMED"
+        },
+        {
+          "label": "Laminar Nu_Dh (T-const)",
+          "value": "5.597",
+          "unit": "-",
+          "sourceRef": "F13 Table 7.4"
+        },
+        {
+          "label": "Derived h_cc",
+          "value": "437.6",
+          "unit": "W/(m^2.K)",
+          "sourceRef": "DERIVED (F2, F13)"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Ribbon pinch or partial blockage",
+          "effect": "Hot streak along affected cell row."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 4,
+        "offsetM": [
+          0.0,
+          0.08,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.coolant_inlet",
+      "name": "Coolant inlet manifold port",
+      "category": "Thermal",
+      "func": "Distributes chilled 50 wt% EG/water coolant across the 12 parallel side cooling ribbons at zone 01.",
+      "material": "Cast aluminum manifold header",
+      "location": "Zone 01 (-X) side manifold",
+      "parameters": [
+        {
+          "label": "Coolant",
+          "value": "50 wt% EG/water",
+          "unit": "-",
+          "sourceRef": "F2"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Manifold maldistribution",
+          "effect": "Lower flow in outer ribbons."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 4,
+        "offsetM": [
+          0.0,
+          0.08,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.coolant_outlet",
+      "name": "Coolant outlet manifold port",
+      "category": "Thermal",
+      "func": "Collects warmed coolant exiting zone 12 from all 12 side ribbons.",
+      "material": "Cast aluminum manifold header",
+      "location": "Zone 12 (+X) side manifold",
+      "parameters": [
+        {
+          "label": "Exit zone",
+          "value": "pack.zone_12",
+          "unit": "-",
+          "sourceRef": "ASSUMED"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Return strainer blockage",
+          "effect": "Drops total pack flow rate."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 4,
+        "offsetM": [
+          0.0,
+          0.08,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.thermal_interface",
+      "name": "Conformal TIM sleeves",
+      "category": "Thermal",
+      "func": "Bridges the cylindrical cell walls to flat cooling ribbons with electrical insulation.",
+      "material": "Silicone TIM gap filler (k = 2.5 W/(m.K) assumed)",
+      "location": "Between cell sidewalls and aluminum cooling ribbons",
+      "parameters": [
+        {
+          "label": "Effective thickness",
+          "value": "1.0",
+          "unit": "mm",
+          "sourceRef": "ASSUMED"
+        },
+        {
+          "label": "Conductivity",
+          "value": "2.5",
+          "unit": "W/(m.K)",
+          "sourceRef": "ASSUMED"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Adhesion voiding",
+          "effect": "Local hot spot on unbonded cell arc."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 4,
+        "offsetM": [
+          0.0,
+          0.08,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.cells",
+      "name": "NMC 4680 cell array (828 cells)",
+      "category": "Electrochemical",
+      "func": "Stores 70.85 kWh nominally in 36 x 23 tabless cylindrical 4680 cells arranged across 12 zones.",
+      "material": "NMC / graphite 4680 cylindrical cells",
+      "location": "Structural tray core bay (36 cols x 23 rows)",
+      "parameters": [
+        {
+          "label": "Dimensions (Dia x H)",
+          "value": "46 x 80",
+          "unit": "mm",
+          "sourceRef": "S15 Table 1; S1"
+        },
+        {
+          "label": "Capacity / Voltage",
+          "value": "23.125 Ah / 3.7 V",
+          "unit": "per cell",
+          "sourceRef": "S15 Table 1"
+        },
+        {
+          "label": "Mass / c_p",
+          "value": "0.355 kg / 912 J/(kg.K)",
+          "unit": "per cell",
+          "sourceRef": "S15; S1; F1"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Core-to-surface temperature lag",
+          "effect": "Higher ohmic heat per unit volume during fast charge (S15, S1)."
+        }
+      ],
+      "provenance": "SOURCED",
+      "explode": {
+        "stage": 3,
+        "offsetM": [
+          0.0,
+          0.16,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "pack.lower_enclosure",
+      "name": "Lower structural base",
+      "category": "Structure",
+      "func": "Forms the structural floor of the 4680 cell-to-pack assembly.",
+      "material": "Aluminum / composite structural sandwich (generic)",
+      "location": "Base reference frame (y <= 0)",
+      "parameters": [
+        {
+          "label": "Base thickness",
+          "value": "10.0",
+          "unit": "mm",
+          "sourceRef": "ASSUMED"
+        }
+      ],
+      "failureModes": [
+        {
+          "mode": "Structural adhesive delamination",
+          "effect": "Reduced pack torsional stiffness."
+        }
+      ],
+      "provenance": "GENERIC_EDUCATIONAL",
+      "explode": {
+        "stage": 0,
+        "offsetM": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    }
+  ]
+}

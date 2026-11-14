@@ -1,0 +1,86 @@
+name: Test and deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust (stable + wasm32 target)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.15.1 --locked
+
+      - name: Rust engine tests (V1–V6, SoH vectors)
+        working-directory: engine
+        run: cargo test --locked
+
+      - name: Build WebAssembly package
+        working-directory: engine
+        run: wasm-pack build wasm --target web --out-dir pkg
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Python reference-model tests
+        working-directory: analysis
+        run: |
+          pip install matplotlib==3.11.2 pytest==9.2.0
+          python -m pytest -q
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install app dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Data schema check, type check, unit tests
+        working-directory: app
+        run: |
+          npm run validate:data
+          npm run typecheck
+          npm test
+
+      - name: Build static site for the repository sub-path
+        working-directory: app
+        env:
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+        run: npm run build
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

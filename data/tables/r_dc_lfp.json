@@ -1,0 +1,50 @@
+{
+  "tableId": "r_dc_lfp",
+  "kind": "R_DC_2D",
+  "architecture": "LFP_BLADE",
+  "unit": "mOhm",
+  "sourceRef": "S15 Figure 8A and Figure 8C (Gorsch et al. 2025, 1C 18s average charge/discharge pulse)",
+  "scriptPath": "analysis/digitize/digitize_s15.py",
+  "generatedAtIso": "2026-11-14T10:54:28Z",
+  "approximate": true,
+  "estimatedErrorNote": "Digitized from 1347x1686 figure image (10C & 40C ridges +/-0.03 mOhm) and Panel C 1C heating (20C slice +/-0.01 mOhm).",
+  "socGridPercent": [
+    20,
+    35,
+    50,
+    70,
+    90
+  ],
+  "temperatureGridC": [
+    10,
+    20,
+    40
+  ],
+  "values": [
+    [
+      1.5416,
+      1.1421,
+      0.9066
+    ],
+    [
+      1.4177,
+      1.0771,
+      0.8832
+    ],
+    [
+      1.3458,
+      1.0319,
+      0.8512
+    ],
+    [
+      1.3111,
+      1.0118,
+      0.8424
+    ],
+    [
+      1.25,
+      0.9553,
+      0.7891
+    ]
+  ]
+}
