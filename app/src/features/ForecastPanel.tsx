@@ -1,5 +1,6 @@
 import React from "react";
 import { TrendingDown } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { UI_STRINGS } from "../content/strings";
 import { useWorkspaceStore } from "../state/workspaceStore";
 import { SohForecastChart } from "../ui/Charts";
@@ -17,10 +18,18 @@ function numOrNull(v: string): number | null {
 }
 
 export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElement {
-  const store = useWorkspaceStore();
-  const cfg = store.sohConfig;
-  const isNmc = store.architecture === "NMC_4680";
-  const forecast = store.sohForecast;
+  const { architecture, sohConfig: cfg, sohForecast: forecast, sohStatus, sohError, hasThermalResult } = useWorkspaceStore(
+    useShallow((s) => ({
+      architecture: s.architecture,
+      sohConfig: s.sohConfig,
+      sohForecast: s.sohForecast,
+      sohStatus: s.sohStatus,
+      sohError: s.sohError,
+      hasThermalResult: s.thermalResult !== null,
+    }))
+  );
+  const updateSohConfig = useWorkspaceStore((s) => s.updateSohConfig);
+  const isNmc = architecture === "NMC_4680";
 
   const nmcMissing =
     isNmc &&
@@ -44,7 +53,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
         </span>
       </div>
 
-      {store.thermalResult && (
+      {hasThermalResult && (
         <InlineBanner tone="info">
           Representative temp (<span className="mono-num">{cfg.representativeTemperatureC.toFixed(1)} °C</span>) &amp;
           avg C-rate (<span className="mono-num">{cfg.averageCRate.toFixed(2)}C</span>) seeded from your thermal run.
@@ -59,7 +68,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
         max={8}
         step={1}
         unit="years"
-        onChange={(v) => store.updateSohConfig({ horizonYears: v })}
+        onChange={(v) => updateSohConfig({ horizonYears: v })}
       />
 
       <SliderField
@@ -70,7 +79,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
         max={95}
         step={1}
         unit="%"
-        onChange={(v) => store.updateSohConfig({ thresholdPercent: v })}
+        onChange={(v) => updateSohConfig({ thresholdPercent: v })}
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)" }}>
@@ -83,7 +92,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
             max={100}
             step={0.5}
             value={cfg.baselineSohPercent}
-            onChange={(e) => store.updateSohConfig({ baselineSohPercent: Number(e.target.value) })}
+            onChange={(e) => updateSohConfig({ baselineSohPercent: Number(e.target.value) })}
           />
         </label>
         <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -95,7 +104,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
             max={1500}
             step={25}
             value={cfg.equivalentFullCyclesPerYear}
-            onChange={(e) => store.updateSohConfig({ equivalentFullCyclesPerYear: Number(e.target.value) })}
+            onChange={(e) => updateSohConfig({ equivalentFullCyclesPerYear: Number(e.target.value) })}
           />
         </label>
         <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -107,7 +116,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
             max={60}
             step={0.5}
             value={cfg.representativeTemperatureC}
-            onChange={(e) => store.updateSohConfig({ representativeTemperatureC: Number(e.target.value) })}
+            onChange={(e) => updateSohConfig({ representativeTemperatureC: Number(e.target.value) })}
           />
         </label>
         <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -119,7 +128,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
             max={4}
             step={0.1}
             value={cfg.averageCRate}
-            onChange={(e) => store.updateSohConfig({ averageCRate: Number(e.target.value) })}
+            onChange={(e) => updateSohConfig({ averageCRate: Number(e.target.value) })}
           />
         </label>
       </div>
@@ -135,7 +144,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
               max={100}
               step={5}
               value={cfg.depthOfDischargePercent}
-              onChange={(e) => store.updateSohConfig({ depthOfDischargePercent: Number(e.target.value) })}
+              onChange={(e) => updateSohConfig({ depthOfDischargePercent: Number(e.target.value) })}
             />
           </label>
           <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -147,7 +156,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
               max={100}
               step={5}
               value={cfg.averageRestingSocPercent}
-              onChange={(e) => store.updateSohConfig({ averageRestingSocPercent: Number(e.target.value) })}
+              onChange={(e) => updateSohConfig({ averageRestingSocPercent: Number(e.target.value) })}
             />
           </label>
         </div>
@@ -166,7 +175,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
                 placeholder="e.g. 1.5"
                 step={0.1}
                 value={cfg.nmcCalendarLossPctPerSqrtYear ?? ""}
-                onChange={(e) => store.updateSohConfig({ nmcCalendarLossPctPerSqrtYear: numOrNull(e.target.value) })}
+                onChange={(e) => updateSohConfig({ nmcCalendarLossPctPerSqrtYear: numOrNull(e.target.value) })}
               />
             </label>
             <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -177,7 +186,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
                 placeholder="e.g. 0.004"
                 step={0.001}
                 value={cfg.nmcCycleLossPctPerFec ?? ""}
-                onChange={(e) => store.updateSohConfig({ nmcCycleLossPctPerFec: numOrNull(e.target.value) })}
+                onChange={(e) => updateSohConfig({ nmcCycleLossPctPerFec: numOrNull(e.target.value) })}
               />
             </label>
             <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -188,7 +197,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
                 placeholder="e.g. 1.0"
                 step={0.05}
                 value={cfg.nmcCycleExponent ?? ""}
-                onChange={(e) => store.updateSohConfig({ nmcCycleExponent: numOrNull(e.target.value) })}
+                onChange={(e) => updateSohConfig({ nmcCycleExponent: numOrNull(e.target.value) })}
               />
             </label>
             <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -199,7 +208,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
                 placeholder="e.g. 25000"
                 step={500}
                 value={cfg.nmcActivationEnergyJPerMol ?? ""}
-                onChange={(e) => store.updateSohConfig({ nmcActivationEnergyJPerMol: numOrNull(e.target.value) })}
+                onChange={(e) => updateSohConfig({ nmcActivationEnergyJPerMol: numOrNull(e.target.value) })}
               />
             </label>
             <label style={{ fontSize: "12px", color: "var(--color-text-secondary)", gridColumn: "1 / -1" }}>
@@ -210,7 +219,7 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
                 placeholder="e.g. 25"
                 step={1}
                 value={cfg.nmcReferenceTempC ?? ""}
-                onChange={(e) => store.updateSohConfig({ nmcReferenceTempC: numOrNull(e.target.value) })}
+                onChange={(e) => updateSohConfig({ nmcReferenceTempC: numOrNull(e.target.value) })}
               />
             </label>
           </div>
@@ -220,14 +229,14 @@ export function ForecastPanel({ onRunSoh }: ForecastPanelProps): React.ReactElem
       <button
         type="button"
         className="btn btn-primary"
-        disabled={store.sohStatus === "running" || nmcMissing}
+        disabled={sohStatus === "running" || nmcMissing}
         onClick={onRunSoh}
       >
         <TrendingDown size={15} strokeWidth={1.5} aria-hidden="true" />
-        <span>{store.sohStatus === "running" ? "Computing…" : "Compute SoH projection"}</span>
+        <span>{sohStatus === "running" ? "Computing…" : "Compute SoH projection"}</span>
       </button>
 
-      {store.sohError && <InlineBanner tone="danger">{store.sohError}</InlineBanner>}
+      {sohError && <InlineBanner tone="danger">{sohError}</InlineBanner>}
 
       {!forecast ? (
         <div className="panel-card" style={{ padding: "var(--space-3)", fontSize: "13px", color: "var(--color-text-muted)" }}>

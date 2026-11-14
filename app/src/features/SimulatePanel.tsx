@@ -1,5 +1,6 @@
 import React from "react";
 import { Play, RotateCcw, Square } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import type { ScenarioPreset, ThermalResult } from "../domain/contracts";
 import { computeCoolingPreview, getPackDefinition, getPresets } from "../domain/dataLoaders";
 import { validateSimulationConfig } from "../domain/validation";
@@ -13,29 +14,86 @@ export interface SimulatePanelProps {
   onCancel: () => void;
 }
 
-export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.ReactElement {
-  const store = useWorkspaceStore();
-  const pack = getPackDefinition(store.architecture);
-  const presets = getPresets();
-  const simValidation = validateSimulationConfig(store.simConfig);
-  const coolingPreview = computeCoolingPreview(pack, store.simConfig.coolantFlowLpm);
+const HotspotZonesList = React.memo(function HotspotZonesList({
+  result,
+}: {
+  result: ThermalResult;
+}): React.ReactElement {
+  const simPlaybackSampleIndex = useWorkspaceStore((s) => s.simPlaybackSampleIndex);
 
-  const hasError = simValidation.issues.some((i) => i.severity === "error");
-  const isRunning = store.simStatus === "running";
-  const res: ThermalResult | null = store.thermalResult;
-
-  // Build sorted zone ranking at end of run (or current playback step)
   const zoneRanking = React.useMemo(() => {
-    if (!res) return [];
-    const nS = res.nSamples;
-    const sIdx = Math.min(store.simPlaybackSampleIndex, Math.max(0, nS - 1));
-    return res.zoneIds
+    const nS = result.nSamples;
+    const sIdx = Math.min(simPlaybackSampleIndex, Math.max(0, nS - 1));
+    return result.zoneIds
       .map((zoneId, zIdx) => ({
         zoneId,
-        tempC: res.zoneTemperaturesC[zIdx * nS + sIdx] ?? 0,
+        tempC: result.zoneTemperaturesC[zIdx * nS + sIdx] ?? 0,
       }))
       .sort((a, b) => b.tempC - a.tempC);
-  }, [res, store.simPlaybackSampleIndex]);
+  }, [result, simPlaybackSampleIndex]);
+
+  return (
+    <div>
+      <div className="caption-label" style={{ marginBottom: "6px" }}>
+        HOTSPOT ZONES (CLICK TO HIGHLIGHT)
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
+        {zoneRanking.slice(0, 6).map((z) => {
+          const isHot = z.zoneId === result.summary.hottestZoneId;
+          return (
+            <button
+              key={z.zoneId}
+              type="button"
+              className="btn btn-secondary btn-sm mono-num"
+              style={{
+                justifyContent: "space-between",
+                borderColor: isHot ? "var(--color-status-warning)" : undefined,
+                minHeight: "30px",
+                fontSize: "12px",
+              }}
+              onClick={() => useWorkspaceStore.getState().selectComponent("pack.cells", z.zoneId, null)}
+            >
+              <span>{z.zoneId.replace("pack.", "")}</span>
+              <span>{z.tempC.toFixed(1)} °C</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.ReactElement {
+  const {
+    architecture,
+    simConfig,
+    simStatus,
+    simProgressPct,
+    simError,
+    selectedPresetId,
+    thermalResult,
+    thermalResultStale,
+  } = useWorkspaceStore(
+    useShallow((s) => ({
+      architecture: s.architecture,
+      simConfig: s.simConfig,
+      simStatus: s.simStatus,
+      simProgressPct: s.simProgressPct,
+      simError: s.simError,
+      selectedPresetId: s.selectedPresetId,
+      thermalResult: s.thermalResult,
+      thermalResultStale: s.thermalResultStale,
+    }))
+  );
+
+  const pack = getPackDefinition(architecture);
+  const presets = getPresets();
+  const simValidation = validateSimulationConfig(simConfig);
+  const coolingPreview = computeCoolingPreview(pack, simConfig.coolantFlowLpm);
+
+  const hasError = simValidation.issues.some((i) => i.severity === "error");
+  const isRunning = simStatus === "running";
+  const res: ThermalResult | null = thermalResult;
 
   return (
     <div style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
@@ -46,12 +104,12 @@ export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.Re
         <select
           id="preset-select"
           className="field-select"
-          value={store.selectedPresetId}
+          value={selectedPresetId}
           disabled={isRunning}
           onChange={(e) => {
             const v = e.target.value;
             if (v !== "custom") {
-              store.applyPreset(v as ScenarioPreset["id"]);
+              useWorkspaceStore.getState().applyPreset(v as ScenarioPreset["id"]);
             }
           }}
         >
@@ -67,12 +125,12 @@ export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.Re
       <SliderField
         id="charging-power"
         label="Charging power"
-        value={store.simConfig.chargingPowerKw}
+        value={simConfig.chargingPowerKw}
         min={10}
         max={150}
         step={5}
         unit="kW"
-        onChange={(v) => store.updateSimConfig({ chargingPowerKw: v })}
+        onChange={(v) => useWorkspaceStore.getState().updateSimConfig({ chargingPowerKw: v })}
         error={simValidation.issues.find((i) => i.field === "chargingPowerKw" && i.severity === "error")?.message}
         warning={simValidation.issues.find((i) => i.field === "chargingPowerKw" && i.severity === "warning")?.message}
       />
@@ -80,24 +138,24 @@ export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.Re
       <SliderField
         id="ambient-temp"
         label="Ambient temperature"
-        value={store.simConfig.ambientTemperatureC}
+        value={simConfig.ambientTemperatureC}
         min={-10}
         max={45}
         step={1}
         unit="°C"
-        onChange={(v) => store.updateSimConfig({ ambientTemperatureC: v })}
+        onChange={(v) => useWorkspaceStore.getState().updateSimConfig({ ambientTemperatureC: v })}
         error={simValidation.issues.find((i) => i.field === "ambientTemperatureC" && i.severity === "error")?.message}
       />
 
       <SliderField
         id="coolant-flow"
         label="Coolant flow rate"
-        value={store.simConfig.coolantFlowLpm}
+        value={simConfig.coolantFlowLpm}
         min={1}
         max={20}
         step={0.5}
         unit="L/min"
-        onChange={(v) => store.updateSimConfig({ coolantFlowLpm: v })}
+        onChange={(v) => useWorkspaceStore.getState().updateSimConfig({ coolantFlowLpm: v })}
         error={simValidation.issues.find((i) => i.field === "coolantFlowLpm" && i.severity === "error")?.message}
         warning={simValidation.issues.find((i) => i.field === "coolantFlowLpm" && i.severity === "warning")?.message}
       />
@@ -111,8 +169,8 @@ export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.Re
               className="field-input mono-num"
               min={-10}
               max={45}
-              value={store.simConfig.coolantInletTemperatureC}
-              onChange={(e) => store.updateSimConfig({ coolantInletTemperatureC: Number(e.target.value) })}
+              value={simConfig.coolantInletTemperatureC}
+              onChange={(e) => useWorkspaceStore.getState().updateSimConfig({ coolantInletTemperatureC: Number(e.target.value) })}
             />
           </label>
           <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -122,8 +180,8 @@ export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.Re
               className="field-input mono-num"
               min={1}
               max={180}
-              value={store.simConfig.maxDurationMinutes}
-              onChange={(e) => store.updateSimConfig({ maxDurationMinutes: Number(e.target.value) })}
+              value={simConfig.maxDurationMinutes}
+              onChange={(e) => useWorkspaceStore.getState().updateSimConfig({ maxDurationMinutes: Number(e.target.value) })}
             />
           </label>
           <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -133,8 +191,8 @@ export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.Re
               className="field-input mono-num"
               min={0}
               max={95}
-              value={store.simConfig.initialSocPercent}
-              onChange={(e) => store.updateSimConfig({ initialSocPercent: Number(e.target.value) })}
+              value={simConfig.initialSocPercent}
+              onChange={(e) => useWorkspaceStore.getState().updateSimConfig({ initialSocPercent: Number(e.target.value) })}
             />
           </label>
           <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -144,8 +202,8 @@ export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.Re
               className="field-input mono-num"
               min={5}
               max={100}
-              value={store.simConfig.targetSocPercent}
-              onChange={(e) => store.updateSimConfig({ targetSocPercent: Number(e.target.value) })}
+              value={simConfig.targetSocPercent}
+              onChange={(e) => useWorkspaceStore.getState().updateSimConfig({ targetSocPercent: Number(e.target.value) })}
             />
           </label>
         </div>
@@ -162,7 +220,7 @@ export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.Re
         {isRunning ? (
           <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={onCancel}>
             <Square size={14} strokeWidth={1.5} aria-hidden="true" />
-            <span>Cancel ({store.simProgressPct}%)</span>
+            <span>Cancel ({simProgressPct}%)</span>
           </button>
         ) : (
           <button type="button" className="btn btn-primary" style={{ flex: 1 }} disabled={hasError} onClick={onRun}>
@@ -174,7 +232,7 @@ export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.Re
           type="button"
           className="btn btn-secondary"
           disabled={isRunning}
-          onClick={() => store.resetSimulationInputs()}
+          onClick={() => useWorkspaceStore.getState().resetSimulationInputs()}
         >
           <RotateCcw size={14} strokeWidth={1.5} aria-hidden="true" />
           <span>Reset parameters</span>
@@ -186,10 +244,10 @@ export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.Re
         <span className="mono-num">{simValidation.approxCRate.toFixed(2)}C</span>.
       </InlineBanner>
 
-      {store.simStatus === "failed" && store.simError && (
+      {simStatus === "failed" && simError && (
         <InlineBanner tone="danger">
           <div>
-            <strong>Simulation failed:</strong> {store.simError}
+            <strong>Simulation failed:</strong> {simError}
           </div>
           <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: "6px" }} onClick={onRun}>
             Retry
@@ -197,17 +255,17 @@ export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.Re
         </InlineBanner>
       )}
 
-      {store.simStatus === "cancelled" && (
+      {simStatus === "cancelled" && (
         <InlineBanner tone="warning">Simulation cancelled. Previous results (if any) remain marked stale.</InlineBanner>
       )}
 
-      {res && store.thermalResultStale && (
+      {res && thermalResultStale && (
         <InlineBanner tone="warning">
           Parameters changed — results below are from the previous run. Click Run simulation to update.
         </InlineBanner>
       )}
 
-      {!res && store.simStatus === "idle" && (
+      {!res && simStatus === "idle" && (
         <div className="panel-card" style={{ padding: "var(--space-4)", fontSize: "13px", color: "var(--color-text-muted)" }}>
           Run a simulation to inspect zone temperatures, cooling removal fraction, and 3D heatmap playback.
         </div>
@@ -281,33 +339,7 @@ export function SimulatePanel({ onRun, onCancel }: SimulatePanelProps): React.Re
 
           <ThermalTimeSeriesChart result={res} />
 
-          <div>
-            <div className="caption-label" style={{ marginBottom: "6px" }}>
-              HOTSPOT ZONES (CLICK TO HIGHLIGHT)
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
-              {zoneRanking.slice(0, 6).map((z) => {
-                const isHot = z.zoneId === res.summary.hottestZoneId;
-                return (
-                  <button
-                    key={z.zoneId}
-                    type="button"
-                    className="btn btn-secondary btn-sm mono-num"
-                    style={{
-                      justifyContent: "space-between",
-                      borderColor: isHot ? "var(--color-status-warning)" : undefined,
-                      minHeight: "30px",
-                      fontSize: "12px",
-                    }}
-                    onClick={() => store.selectComponent("pack.cells", z.zoneId, null)}
-                  >
-                    <span>{z.zoneId.replace("pack.", "")}</span>
-                    <span>{z.tempC.toFixed(1)} °C</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <HotspotZonesList result={res} />
         </div>
       )}
     </div>

@@ -11,8 +11,8 @@ function parseCost(v: string): number | null {
 }
 
 export function DecidePanel(): React.ReactElement {
-  const store = useWorkspaceStore();
-  const roi = store.roiInputs;
+  const roi = useWorkspaceStore((s) => s.roiInputs);
+  const updateRoiInputs = useWorkspaceStore((s) => s.updateRoiInputs);
   const result = computeRoiEstimate(roi);
 
   return (
@@ -38,7 +38,7 @@ export function DecidePanel(): React.ReactElement {
           <select
             className="field-select mono-num"
             value={roi.currency}
-            onChange={(e) => store.updateRoiInputs({ currency: e.target.value as CurrencyCode })}
+            onChange={(e) => updateRoiInputs({ currency: e.target.value as CurrencyCode })}
           >
             <option value="IDR">IDR (Rp)</option>
             <option value="USD">USD ($)</option>
@@ -54,7 +54,7 @@ export function DecidePanel(): React.ReactElement {
             step={1}
             value={roi.modulesToReplaceCount}
             onChange={(e) =>
-              store.updateRoiInputs({ modulesToReplaceCount: Math.max(1, Math.floor(Number(e.target.value) || 1)) })
+              updateRoiInputs({ modulesToReplaceCount: Math.max(1, Math.floor(Number(e.target.value) || 1)) })
             }
           />
         </label>
@@ -67,7 +67,7 @@ export function DecidePanel(): React.ReactElement {
             placeholder="Required"
             min={0}
             value={roi.inspectionCost ?? ""}
-            onChange={(e) => store.updateRoiInputs({ inspectionCost: parseCost(e.target.value) })}
+            onChange={(e) => updateRoiInputs({ inspectionCost: parseCost(e.target.value) })}
           />
         </label>
         <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -78,7 +78,7 @@ export function DecidePanel(): React.ReactElement {
             placeholder="Required"
             min={0}
             value={roi.moduleReplacementCost ?? ""}
-            onChange={(e) => store.updateRoiInputs({ moduleReplacementCost: parseCost(e.target.value) })}
+            onChange={(e) => updateRoiInputs({ moduleReplacementCost: parseCost(e.target.value) })}
           />
         </label>
 
@@ -90,7 +90,7 @@ export function DecidePanel(): React.ReactElement {
             placeholder="Required"
             min={0}
             value={roi.packReplacementCost ?? ""}
-            onChange={(e) => store.updateRoiInputs({ packReplacementCost: parseCost(e.target.value) })}
+            onChange={(e) => updateRoiInputs({ packReplacementCost: parseCost(e.target.value) })}
           />
         </label>
       </div>
@@ -105,7 +105,7 @@ export function DecidePanel(): React.ReactElement {
               placeholder="Optional"
               min={0}
               value={roi.downtimeCostPerDay ?? ""}
-              onChange={(e) => store.updateRoiInputs({ downtimeCostPerDay: parseCost(e.target.value) })}
+              onChange={(e) => updateRoiInputs({ downtimeCostPerDay: parseCost(e.target.value) })}
             />
           </label>
           <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -116,7 +116,7 @@ export function DecidePanel(): React.ReactElement {
               placeholder="0"
               min={0}
               value={roi.repairDowntimeDays ?? ""}
-              onChange={(e) => store.updateRoiInputs({ repairDowntimeDays: parseCost(e.target.value) })}
+              onChange={(e) => updateRoiInputs({ repairDowntimeDays: parseCost(e.target.value) })}
             />
           </label>
           <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -127,7 +127,7 @@ export function DecidePanel(): React.ReactElement {
               placeholder="0"
               min={0}
               value={roi.replacementDowntimeDays ?? ""}
-              onChange={(e) => store.updateRoiInputs({ replacementDowntimeDays: parseCost(e.target.value) })}
+              onChange={(e) => updateRoiInputs({ replacementDowntimeDays: parseCost(e.target.value) })}
             />
           </label>
           <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -138,7 +138,7 @@ export function DecidePanel(): React.ReactElement {
               placeholder="Optional"
               min={0}
               value={roi.deferralAnnualCostIncreasePct ?? ""}
-              onChange={(e) => store.updateRoiInputs({ deferralAnnualCostIncreasePct: parseCost(e.target.value) })}
+              onChange={(e) => updateRoiInputs({ deferralAnnualCostIncreasePct: parseCost(e.target.value) })}
             />
           </label>
           <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -149,7 +149,7 @@ export function DecidePanel(): React.ReactElement {
               min={1}
               step={1}
               value={roi.deferralYears}
-              onChange={(e) => store.updateRoiInputs({ deferralYears: Math.max(1, Number(e.target.value) || 1) })}
+              onChange={(e) => updateRoiInputs({ deferralYears: Math.max(1, Number(e.target.value) || 1) })}
             />
           </label>
           <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
@@ -160,7 +160,7 @@ export function DecidePanel(): React.ReactElement {
               placeholder="For payback"
               min={0}
               value={roi.annualBenefitOfActing ?? ""}
-              onChange={(e) => store.updateRoiInputs({ annualBenefitOfActing: parseCost(e.target.value) })}
+              onChange={(e) => updateRoiInputs({ annualBenefitOfActing: parseCost(e.target.value) })}
             />
           </label>
         </div>
@@ -169,7 +169,7 @@ export function DecidePanel(): React.ReactElement {
           <input
             type="checkbox"
             checked={roi.repairAddressesPackWideAgeing}
-            onChange={(e) => store.updateRoiInputs({ repairAddressesPackWideAgeing: e.target.checked })}
+            onChange={(e) => updateRoiInputs({ repairAddressesPackWideAgeing: e.target.checked })}
           />
           <span>Repair addresses pack-wide ageing</span>
         </label>

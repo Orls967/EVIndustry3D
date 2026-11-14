@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls, Line } from "@react-three/drei";
-import { useFrame, useThree } from "@react-three/fiber";
+import { addAfterEffect, useFrame, useThree } from "@react-three/fiber";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { ArchitectureId } from "../../domain/contracts";
-import type { CameraPreset, SceneRenderMetrics } from "../../state/workspaceStore";
+import type { CameraPreset, QualityTier } from "../../state/workspaceStore";
+import { AdaptiveDprController } from "../controllers/adaptiveDpr";
 import { computeExplodeOffsets } from "../controllers/explodeController";
+import type { CameraSyncBus } from "../controllers/sceneInteractionBus";
 
 const PRESET_DIRS: Record<CameraPreset, [number, number, number]> = {
   iso: [1.5, 1.05, 1.5],
@@ -26,10 +28,13 @@ export interface CameraRigProps {
   cameraPreset: CameraPreset;
   cameraRequestNonce: number;
   c3AutoRotate: boolean;
+  qualityTier: QualityTier;
   keyboardCommandRef: React.MutableRefObject<{ type: "orbit" | "zoom"; dx: number; dy: number } | null>;
+  isOrbitDraggingRef?: React.MutableRefObject<boolean>;
+  telemetryElRef?: React.RefObject<HTMLDivElement | null>;
   onUserInteract: () => void;
-  onReportMetrics: (metrics: SceneRenderMetrics) => void;
   syncId?: string;
+  cameraSyncBus?: CameraSyncBus;
   externalPose?: SharedCameraPose | null;
   onBroadcastPose?: (pose: SharedCameraPose) => void;
 }
@@ -40,14 +45,17 @@ export function CameraRig({
   cameraPreset,
   cameraRequestNonce,
   c3AutoRotate,
+  qualityTier,
   keyboardCommandRef,
+  isOrbitDraggingRef,
+  telemetryElRef,
   onUserInteract,
-  onReportMetrics,
   syncId,
+  cameraSyncBus,
   externalPose,
   onBroadcastPose,
 }: CameraRigProps): React.ReactElement {
-  const { camera, gl, invalidate } = useThree();
+  const { camera, gl, invalidate, setDpr } = useThree();
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const applyingExternalRef = useRef(false);
 
@@ -66,8 +74,31 @@ export function CameraRig({
   } | null>(null);
 
   const offsets = useMemo(() => computeExplodeOffsets(architecture, explodePercent), [architecture, explodePercent]);
-  const lastMetricsMsRef = useRef(0);
+
+  const targetMaxDpr =
+    qualityTier === "low"
+      ? 1
+      : typeof window !== "undefined"
+        ? Math.min(window.devicePixelRatio || 1, 2)
+        : 1;
+
+  const adaptiveDprRef = useRef<AdaptiveDprController | null>(null);
+  if (!adaptiveDprRef.current) {
+    adaptiveDprRef.current = new AdaptiveDprController(targetMaxDpr);
+  }
+
+  useEffect(() => {
+    const nextDpr = adaptiveDprRef.current!.setTargetMaxDpr(targetMaxDpr);
+    setDpr(nextDpr);
+    invalidate();
+  }, [targetMaxDpr, setDpr, invalidate]);
+
+  const lastSeenGlFrameRef = useRef(-1);
+  const lastRenderNowRef = useRef<number | null>(null);
+  const lastTelemetryFlushRef = useRef(0);
   const frameAccumRef = useRef({ count: 0, totalMs: 0 });
+  const lastGlCountsRef = useRef({ calls: 0, tris: 0 });
+  const idleTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const dir = PRESET_DIRS[cameraPreset];
@@ -100,7 +131,7 @@ export function CameraRig({
     invalidate();
   }, [cameraPreset, cameraRequestNonce, offsets.cameraDistanceFactor, offsets.upperEnclosureY, camera, invalidate, reducedMotion]);
 
-  // Trigger continuous gentle invalidation ONLY while C3 auto-rotate or camera transition runs (0-watt idle when stopped!)
+  // Trigger continuous gentle invalidation ONLY while C3 auto-rotate runs (0-watt idle when stopped)
   useEffect(() => {
     if (!c3AutoRotate || reducedMotion) return;
     let rafId = 0;
@@ -112,8 +143,78 @@ export function CameraRig({
     return () => cancelAnimationFrame(rafId);
   }, [c3AutoRotate, reducedMotion, invalidate]);
 
-  useFrame((_, delta) => {
+  // Update telemetry DOM directly after WebGLRenderer.render() via addAfterEffect (zero React state / store writes)
+  useEffect(() => {
+    const unsubAfter = addAfterEffect(() => {
+      if (gl.info.render.frame === lastSeenGlFrameRef.current) return;
+      lastSeenGlFrameRef.current = gl.info.render.frame;
+
+      const calls = gl.info.render.calls;
+      const tris = gl.info.render.triangles;
+      lastGlCountsRef.current.calls = calls;
+      lastGlCountsRef.current.tris = tris;
+
+      if (idleTimerRef.current !== null) {
+        window.clearTimeout(idleTimerRef.current);
+      }
+      idleTimerRef.current = window.setTimeout(() => {
+        const el = telemetryElRef?.current;
+        if (el) {
+          const { calls: c, tris: t } = lastGlCountsRef.current;
+          el.textContent = `${c} calls · ${t.toLocaleString()} tris · idle`;
+        }
+        frameAccumRef.current.count = 0;
+        frameAccumRef.current.totalMs = 0;
+        lastRenderNowRef.current = null;
+      }, 600);
+
+      const el = telemetryElRef?.current;
+      if (!el) return;
+
+      const now = performance.now();
+      if (lastTelemetryFlushRef.current === 0 || now - lastTelemetryFlushRef.current >= 400) {
+        lastTelemetryFlushRef.current = now;
+        const { count, totalMs } = frameAccumRef.current;
+        frameAccumRef.current.count = 0;
+        frameAccumRef.current.totalMs = 0;
+
+        if (count >= 2 && totalMs > 0) {
+          const avgMs = totalMs / count;
+          const fps = Math.min(120, Math.round(1000 / avgMs));
+          el.textContent = `${calls} calls · ${tris.toLocaleString()} tris · ${fps} fps (${avgMs.toFixed(1)} ms avg)`;
+        } else {
+          el.textContent = `${calls} calls · ${tris.toLocaleString()} tris · idle`;
+        }
+      }
+    });
+
+    return () => {
+      unsubAfter();
+      if (idleTimerRef.current !== null) {
+        window.clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+    };
+  }, [gl, telemetryElRef]);
+
+  useFrame(() => {
     const now = performance.now();
+
+    if (lastRenderNowRef.current !== null) {
+      const gap = now - lastRenderNowRef.current;
+      if (gap > 0 && gap <= 120) {
+        frameAccumRef.current.count += 1;
+        frameAccumRef.current.totalMs += gap;
+      }
+    }
+    lastRenderNowRef.current = now;
+
+    if (qualityTier !== "low" && adaptiveDprRef.current) {
+      const nextDpr = adaptiveDprRef.current.recordFrame(now);
+      if (nextDpr !== null) {
+        setDpr(nextDpr);
+      }
+    }
 
     // Handle active 600ms camera transition
     if (animRef.current?.active) {
@@ -148,25 +249,25 @@ export function CameraRig({
       camera.position.copy(controlsRef.current.target).add(offset);
       controlsRef.current.update();
     }
-
-    // Report gl.info & frame-time metrics periodically (~once every 400ms)
-    frameAccumRef.current.count += 1;
-    frameAccumRef.current.totalMs += delta * 1000;
-    if (now - lastMetricsMsRef.current > 400) {
-      const avgMs = Math.max(frameAccumRef.current.totalMs / Math.max(frameAccumRef.current.count, 1), 0.1);
-      lastMetricsMsRef.current = now;
-      frameAccumRef.current.count = 0;
-      frameAccumRef.current.totalMs = 0;
-      onReportMetrics({
-        drawCalls: gl.info.render.calls,
-        triangles: gl.info.render.triangles,
-        lastFrameMs: Number(avgMs.toFixed(2)),
-        fpsEstimate: Math.min(120, Math.round(1000 / avgMs)),
-      });
-    }
   });
 
-  // Apply synced external camera pose from linked Compare viewport without ping-pong
+  // Apply synced external camera pose via ref-based bus (zero React re-renders)
+  useEffect(() => {
+    if (!cameraSyncBus || !syncId) return;
+    return cameraSyncBus.subscribe((pose) => {
+      if (pose.sourceId === syncId) return;
+      applyingExternalRef.current = true;
+      camera.position.set(...pose.position);
+      if (controlsRef.current) {
+        controlsRef.current.target.set(...pose.target);
+        controlsRef.current.update();
+      }
+      invalidate();
+      applyingExternalRef.current = false;
+    });
+  }, [cameraSyncBus, syncId, camera, invalidate]);
+
+  // Fallback support if externalPose prop is passed
   useEffect(() => {
     if (!externalPose || !syncId || externalPose.sourceId === syncId) return;
     applyingExternalRef.current = true;
@@ -179,7 +280,6 @@ export function CameraRig({
     applyingExternalRef.current = false;
   }, [externalPose, syncId, camera, invalidate]);
 
-  // C3 autoRotateSpeed: OrbitControls rotates at 2*pi/60 * autoRotateSpeed rad/s -> 0.5 gives ~60s/rev at 60fps
   return (
     <OrbitControls
       ref={controlsRef}
@@ -191,17 +291,23 @@ export function CameraRig({
       autoRotate={c3AutoRotate && !reducedMotion}
       autoRotateSpeed={0.5}
       onStart={() => {
+        if (isOrbitDraggingRef) isOrbitDraggingRef.current = true;
         if (animRef.current) animRef.current.active = false;
         onUserInteract();
       }}
+      onEnd={() => {
+        if (isOrbitDraggingRef) isOrbitDraggingRef.current = false;
+      }}
       onChange={() => {
         invalidate();
-        if (!applyingExternalRef.current && syncId && onBroadcastPose && controlsRef.current) {
-          onBroadcastPose({
+        if (!applyingExternalRef.current && syncId && controlsRef.current) {
+          const pose: SharedCameraPose = {
             sourceId: syncId,
             position: [camera.position.x, camera.position.y, camera.position.z],
             target: [controlsRef.current.target.x, controlsRef.current.target.y, controlsRef.current.target.z],
-          });
+          };
+          cameraSyncBus?.broadcast(pose);
+          onBroadcastPose?.(pose);
         }
       }}
     />
@@ -243,4 +349,3 @@ export function ClippingPlaneOverlay({
     </group>
   );
 }
-

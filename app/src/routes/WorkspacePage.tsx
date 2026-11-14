@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { Eye, EyeOff, PanelLeftClose, PanelLeftOpen, Pause, Play, Search } from "lucide-react";
-import type { ArchitectureId } from "../domain/contracts";
+import { useShallow } from "zustand/react/shallow";
+import type { ArchitectureId, ThermalResult } from "../domain/contracts";
 import { getPackDefinition } from "../domain/dataLoaders";
 import {
   cancelThermalInWorkspace,
@@ -25,55 +26,152 @@ function formatMmSs(totalSec: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+const InspectZoneTempCard = React.memo(function InspectZoneTempCard({
+  selectedComponentZoneId,
+}: {
+  selectedComponentZoneId: string | null | undefined;
+}): React.ReactElement | null {
+  const { thermalResult, selectedZoneId, simPlaybackSampleIndex } = useWorkspaceStore(
+    useShallow((s) => ({
+      thermalResult: s.thermalResult,
+      selectedZoneId: s.selectedZoneId,
+      simPlaybackSampleIndex: s.simPlaybackSampleIndex,
+    }))
+  );
+
+  if (!thermalResult) return null;
+  const targetZone = selectedZoneId ?? selectedComponentZoneId ?? thermalResult.zoneIds[0];
+  const zIdx = thermalResult.zoneIds.findIndex((z) => z === targetZone);
+  const tempC =
+    zIdx < 0
+      ? thermalResult.summary.averageTemperatureC
+      : thermalResult.zoneTemperaturesC[
+          zIdx * thermalResult.nSamples +
+            Math.min(simPlaybackSampleIndex, Math.max(0, thermalResult.nSamples - 1))
+        ] ?? null;
+
+  if (tempC === null) return null;
+
+  return (
+    <div className="panel-card" style={{ padding: "8px 10px", marginTop: "var(--space-2)" }}>
+      <div style={{ fontSize: "11px", color: "var(--color-text-muted)" }}>
+        Simulated temperature ({selectedZoneId ? selectedZoneId.replace("pack.", "") : "pack average"})
+      </div>
+      <div className="mono-num" style={{ fontSize: "16px", fontWeight: 600 }}>
+        {tempC.toFixed(1)} °C
+      </div>
+    </div>
+  );
+});
+
+const PlaybackBottomStrip = React.memo(function PlaybackBottomStrip({
+  thermalResult,
+}: {
+  thermalResult: ThermalResult | null;
+}): React.ReactElement {
+  const { simPlaybackSampleIndex, simPlaybackPlaying } = useWorkspaceStore(
+    useShallow((s) => ({
+      simPlaybackSampleIndex: s.simPlaybackSampleIndex,
+      simPlaybackPlaying: s.simPlaybackPlaying,
+    }))
+  );
+
+  const sIdx = thermalResult
+    ? Math.min(simPlaybackSampleIndex, Math.max(0, thermalResult.nSamples - 1))
+    : 0;
+  const currentT = thermalResult ? (thermalResult.timeSeconds[sIdx] ?? 0) : 0;
+  const currentSoc = thermalResult ? (thermalResult.socPercent[sIdx] ?? 0) : 0;
+
+  return (
+    <div className="workspace-bottom-strip">
+      {thermalResult ? (
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flex: 1, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ minHeight: "30px" }}
+            onClick={() => useWorkspaceStore.getState().setPlaybackPlaying(!simPlaybackPlaying)}
+            aria-label={simPlaybackPlaying ? "Pause thermal playback" : "Play thermal playback"}
+          >
+            {simPlaybackPlaying ? <Pause size={13} strokeWidth={1.5} /> : <Play size={13} strokeWidth={1.5} />}
+            <span>{simPlaybackPlaying ? "Pause" : "Play"}</span>
+          </button>
+          <input
+            type="range"
+            aria-label="Simulation playback time"
+            min={0}
+            max={Math.max(0, thermalResult.nSamples - 1)}
+            value={sIdx}
+            onChange={(e) => {
+              const st = useWorkspaceStore.getState();
+              st.setPlaybackPlaying(false);
+              st.setPlaybackSampleIndex(Number(e.target.value));
+            }}
+            style={{ flex: 1, minWidth: "140px", maxWidth: "420px", accentColor: "var(--color-accent-primary)" }}
+          />
+          <span className="mono-num" style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
+            {formatMmSs(currentT)} / {formatMmSs(thermalResult.durationSeconds)} · SOC {currentSoc.toFixed(0)}%
+          </span>
+        </div>
+      ) : (
+        <span style={{ color: "var(--color-text-muted)" }}>
+          Run a thermal simulation in Simulate to unlock heatmap playback.
+        </span>
+      )}
+      <span className="mono-num" style={{ color: "var(--color-text-secondary)" }}>
+        Engine v{thermalResult?.engineVersion ?? "0.1.0"} · Data v1.0.0
+      </span>
+    </div>
+  );
+});
+
 export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): React.ReactElement {
-  const store = useWorkspaceStore();
+  const {
+    architecture,
+    activeTab,
+    mobileSheetHeight,
+    leftPanelCollapsed,
+    selectedComponentId,
+    selectedZoneId,
+    selectedCellId,
+    componentVisibility,
+    componentSearch,
+    selectedPresetId,
+    simStatus,
+    thermalResult,
+  } = useWorkspaceStore(
+    useShallow((s) => ({
+      architecture: s.architecture,
+      activeTab: s.activeTab,
+      mobileSheetHeight: s.mobileSheetHeight,
+      leftPanelCollapsed: s.leftPanelCollapsed,
+      selectedComponentId: s.selectedComponentId,
+      selectedZoneId: s.selectedZoneId,
+      selectedCellId: s.selectedCellId,
+      componentVisibility: s.componentVisibility,
+      componentSearch: s.componentSearch,
+      selectedPresetId: s.selectedPresetId,
+      simStatus: s.simStatus,
+      thermalResult: s.thermalResult,
+    }))
+  );
+
   const pack = getPackDefinition(routeArch);
   const [mobilePanel, setMobilePanel] = useState<"parts" | WorkspaceTab>("inspect");
 
   // Sync store architecture cleanly when entering directly via hash URL
   useEffect(() => {
-    if (store.architecture !== routeArch) {
-      store.syncRouteArchitecture(routeArch);
+    if (architecture !== routeArch) {
+      useWorkspaceStore.getState().syncRouteArchitecture(routeArch);
     }
-  }, [routeArch, store]);
-
-  // Playback animation timer for completed thermal results
-  useEffect(() => {
-    if (!store.simPlaybackPlaying || !store.thermalResult) return;
-    const totalSamples = store.thermalResult.nSamples;
-    if (totalSamples <= 1) {
-      store.setPlaybackPlaying(false);
-      return;
-    }
-    const id = window.setInterval(() => {
-      const s = useWorkspaceStore.getState();
-      if (!s.simPlaybackPlaying || !s.thermalResult) return;
-      const next = s.simPlaybackSampleIndex + 1;
-      if (next >= s.thermalResult.nSamples) {
-        s.setPlaybackSampleIndex(0);
-      } else {
-        s.setPlaybackSampleIndex(next);
-      }
-    }, 120);
-    return () => window.clearInterval(id);
-  }, [store.simPlaybackPlaying, store.thermalResult, store]);
+  }, [routeArch, architecture]);
 
   const filteredComponents = pack.components.filter((c) => {
-    const q = store.componentSearch.trim().toLowerCase();
+    const q = componentSearch.trim().toLowerCase();
     return !q || c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q) || c.category.toLowerCase().includes(q);
   });
 
-  const selectedComponent = pack.components.find((c) => c.id === store.selectedComponentId) ?? null;
-
-  // Component/zone live temperature readout when simulation exists
-  const selectedZoneTempC = React.useMemo(() => {
-    if (!store.thermalResult) return null;
-    const targetZone = store.selectedZoneId ?? selectedComponent?.zoneId ?? store.thermalResult.zoneIds[0];
-    const zIdx = store.thermalResult.zoneIds.findIndex((z) => z === targetZone);
-    if (zIdx < 0) return store.thermalResult.summary.averageTemperatureC;
-    const sIdx = Math.min(store.simPlaybackSampleIndex, Math.max(0, store.thermalResult.nSamples - 1));
-    return store.thermalResult.zoneTemperaturesC[zIdx * store.thermalResult.nSamples + sIdx] ?? null;
-  }, [store.thermalResult, store.selectedZoneId, selectedComponent, store.simPlaybackSampleIndex]);
+  const selectedComponent = pack.components.find((c) => c.id === selectedComponentId) ?? null;
 
   const componentTreeContent = (
     <div style={{ padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
@@ -88,8 +186,8 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
           type="search"
           aria-label="Filter components"
           placeholder="Filter components…"
-          value={store.componentSearch}
-          onChange={(e) => store.setComponentSearch(e.target.value)}
+          value={componentSearch}
+          onChange={(e) => useWorkspaceStore.getState().setComponentSearch(e.target.value)}
           className="field-input"
           style={{ paddingLeft: "30px" }}
         />
@@ -102,8 +200,8 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "4px" }}>
           {filteredComponents.map((comp) => {
-            const visible = store.componentVisibility[comp.id] !== false;
-            const selected = store.selectedComponentId === comp.id;
+            const visible = componentVisibility[comp.id] !== false;
+            const selected = selectedComponentId === comp.id;
             return (
               <li
                 key={comp.id}
@@ -120,7 +218,7 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
               >
                 <button
                   type="button"
-                  onClick={() => store.selectComponent(comp.id)}
+                  onClick={() => useWorkspaceStore.getState().selectComponent(comp.id)}
                   style={{
                     flex: 1,
                     textAlign: "left",
@@ -141,7 +239,7 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
                   type="button"
                   className="btn btn-ghost btn-sm"
                   aria-label={`${visible ? "Hide" : "Show"} ${comp.name}`}
-                  onClick={() => store.toggleComponentVisibility(comp.id)}
+                  onClick={() => useWorkspaceStore.getState().toggleComponentVisibility(comp.id)}
                   style={{ padding: "4px 6px", minHeight: "28px" }}
                 >
                   {visible ? <Eye size={14} strokeWidth={1.5} /> : <EyeOff size={14} strokeWidth={1.5} />}
@@ -170,9 +268,9 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
               {selectedComponent.id} · {selectedComponent.category}
             </div>
             <h2 style={{ margin: "4px 0 var(--space-2)", fontSize: "18px" }}>{selectedComponent.name}</h2>
-            {store.selectedCellId && (
+            {selectedCellId && (
               <div className="mono-num" style={{ fontSize: "12px", color: "var(--color-accent-primary)", marginBottom: "6px" }}>
-                Picked cell: {store.selectedCellId} · Zone: {store.selectedZoneId}
+                Picked cell: {selectedCellId} · Zone: {selectedZoneId}
               </div>
             )}
             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
@@ -181,16 +279,7 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
                 {selectedComponent.provenance}
               </span>
             </div>
-            {selectedZoneTempC !== null && (
-              <div className="panel-card" style={{ padding: "8px 10px", marginTop: "var(--space-2)" }}>
-                <div style={{ fontSize: "11px", color: "var(--color-text-muted)" }}>
-                  Simulated temperature ({store.selectedZoneId ? store.selectedZoneId.replace("pack.", "") : "pack average"})
-                </div>
-                <div className="mono-num" style={{ fontSize: "16px", fontWeight: 600 }}>
-                  {selectedZoneTempC.toFixed(1)} °C
-                </div>
-              </div>
-            )}
+            <InspectZoneTempCard selectedComponentZoneId={selectedComponent.zoneId} />
           </div>
 
           <div>
@@ -255,11 +344,6 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
     return <DecidePanel />;
   };
 
-  const res = store.thermalResult;
-  const sIdx = res ? Math.min(store.simPlaybackSampleIndex, Math.max(0, res.nSamples - 1)) : 0;
-  const currentT = res ? (res.timeSeconds[sIdx] ?? 0) : 0;
-  const currentSoc = res ? (res.socPercent[sIdx] ?? 0) : 0;
-
   return (
     <div className="workspace-shell">
       {/* Workspace sub-bar */}
@@ -268,10 +352,10 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
           <button
             type="button"
             className="btn btn-ghost btn-sm"
-            aria-label={store.leftPanelCollapsed ? "Expand component tree" : "Collapse component tree"}
-            onClick={() => store.toggleLeftPanel()}
+            aria-label={leftPanelCollapsed ? "Expand component tree" : "Collapse component tree"}
+            onClick={() => useWorkspaceStore.getState().toggleLeftPanel()}
           >
-            {store.leftPanelCollapsed ? <PanelLeftOpen size={16} strokeWidth={1.5} /> : <PanelLeftClose size={16} strokeWidth={1.5} />}
+            {leftPanelCollapsed ? <PanelLeftOpen size={16} strokeWidth={1.5} /> : <PanelLeftClose size={16} strokeWidth={1.5} />}
           </button>
           <label htmlFor="workspace-arch-switch" className="sr-only">
             Active battery architecture
@@ -283,7 +367,7 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
             value={routeArch}
             onChange={(e) => {
               const next = e.target.value as ArchitectureId;
-              const ok = store.requestArchitectureSwitch(next);
+              const ok = useWorkspaceStore.getState().requestArchitectureSwitch(next);
               if (ok) {
                 window.location.hash = next === "LFP_BLADE" ? "#/simulator/lfp" : "#/simulator/nmc";
               }
@@ -293,7 +377,7 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
             <option value="NMC_4680">NMC 4680 (92s9p)</option>
           </select>
           <span className="mono-num" style={{ fontSize: "13px", color: "var(--color-text-secondary)" }}>
-            Scenario: {store.selectedPresetId} · Status: {store.simStatus}
+            Scenario: {selectedPresetId} · Status: {simStatus}
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
@@ -305,10 +389,10 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
       </div>
 
       {/* Main 3-region body */}
-      <div className={`workspace-body ${store.leftPanelCollapsed ? "workspace-body--left-collapsed" : ""}`}>
+      <div className={`workspace-body ${leftPanelCollapsed ? "workspace-body--left-collapsed" : ""}`}>
         {/* Left desktop tree */}
         <aside className="workspace-panel workspace-panel--left-desktop" aria-label="Component tree">
-          {!store.leftPanelCollapsed && (
+          {!leftPanelCollapsed && (
             <>
               <div style={{ padding: "var(--space-3)", borderBottom: "1px solid var(--color-border-subtle)" }}>
                 <div className="caption-label">COMPONENTS ({pack.components.length})</div>
@@ -326,7 +410,7 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
         </div>
 
         {/* Right panel / Mobile bottom sheet */}
-        <aside className={`workspace-panel workspace-panel--right workspace-sheet--${store.mobileSheetHeight}`} aria-label="Workspace inspector and tools">
+        <aside className={`workspace-panel workspace-panel--right workspace-sheet--${mobileSheetHeight}`} aria-label="Workspace inspector and tools">
           <div className="tabs-list" role="tablist" aria-label="Workspace panels">
             {(["inspect", "simulate", "forecast", "decide"] as const).map((t) => (
               <button
@@ -334,9 +418,9 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
                 type="button"
                 role="tab"
                 className="tab-btn"
-                aria-selected={store.activeTab === t}
+                aria-selected={activeTab === t}
                 onClick={() => {
-                  store.setActiveTab(t);
+                  useWorkspaceStore.getState().setActiveTab(t);
                   setMobilePanel(t);
                 }}
               >
@@ -349,7 +433,7 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              onClick={() => setMobilePanel(mobilePanel === "parts" ? store.activeTab : "parts")}
+              onClick={() => setMobilePanel(mobilePanel === "parts" ? activeTab : "parts")}
             >
               {mobilePanel === "parts" ? "Back to tab" : "Parts tree"}
             </button>
@@ -358,8 +442,8 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
                 <button
                   key={h}
                   type="button"
-                  className={`btn btn-sm ${store.mobileSheetHeight === h ? "btn-primary" : "btn-secondary"}`}
-                  onClick={() => store.setMobileSheetHeight(h)}
+                  className={`btn btn-sm ${mobileSheetHeight === h ? "btn-primary" : "btn-secondary"}`}
+                  onClick={() => useWorkspaceStore.getState().setMobileSheetHeight(h)}
                 >
                   {h}
                 </button>
@@ -368,50 +452,13 @@ export function WorkspacePage({ routeArch }: { routeArch: ArchitectureId }): Rea
           </div>
 
           <div style={{ flex: 1, overflowY: "auto" }}>
-            {mobilePanel === "parts" ? componentTreeContent : tabBody(store.activeTab)}
+            {mobilePanel === "parts" ? componentTreeContent : tabBody(activeTab)}
           </div>
         </aside>
       </div>
 
       {/* Bottom status / Simulation playback strip */}
-      <div className="workspace-bottom-strip">
-        {res ? (
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flex: 1, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              style={{ minHeight: "30px" }}
-              onClick={() => store.setPlaybackPlaying(!store.simPlaybackPlaying)}
-              aria-label={store.simPlaybackPlaying ? "Pause thermal playback" : "Play thermal playback"}
-            >
-              {store.simPlaybackPlaying ? <Pause size={13} strokeWidth={1.5} /> : <Play size={13} strokeWidth={1.5} />}
-              <span>{store.simPlaybackPlaying ? "Pause" : "Play"}</span>
-            </button>
-            <input
-              type="range"
-              aria-label="Simulation playback time"
-              min={0}
-              max={Math.max(0, res.nSamples - 1)}
-              value={sIdx}
-              onChange={(e) => {
-                store.setPlaybackPlaying(false);
-                store.setPlaybackSampleIndex(Number(e.target.value));
-              }}
-              style={{ flex: 1, minWidth: "140px", maxWidth: "420px", accentColor: "var(--color-accent-primary)" }}
-            />
-            <span className="mono-num" style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
-              {formatMmSs(currentT)} / {formatMmSs(res.durationSeconds)} · SOC {currentSoc.toFixed(0)}%
-            </span>
-          </div>
-        ) : (
-          <span style={{ color: "var(--color-text-muted)" }}>
-            Run a thermal simulation in Simulate to unlock heatmap playback.
-          </span>
-        )}
-        <span className="mono-num" style={{ color: "var(--color-text-secondary)" }}>
-          Engine v{res?.engineVersion ?? "0.1.0"} · Data v1.0.0
-        </span>
-      </div>
+      <PlaybackBottomStrip thermalResult={thermalResult} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import { Link2, Link2Off, Play } from "lucide-react";
 import { UI_STRINGS } from "../content/strings";
 import type { ArchitectureId, ScenarioPreset, SimulationConfig, ThermalResult } from "../domain/contracts";
@@ -9,7 +9,7 @@ import {
   getPresets,
 } from "../domain/dataLoaders";
 import { runComparisonPair } from "../engine/simulationController";
-import type { SharedCameraPose } from "../scene/components/CameraAndClipControllers";
+import { createCameraSyncBus } from "../scene/controllers/sceneInteractionBus";
 import { DataStatusBadge } from "../ui/DataStatusBadge";
 import { PackSchematicPoster } from "../ui/PackSchematicPoster";
 import { InlineBanner, SegmentedControl } from "../ui/Primitives";
@@ -56,7 +56,7 @@ export function ComparePage(): React.ReactElement {
   const [eqMode, setEqMode] = useState<"equal_power" | "equal_crate">("equal_power");
   const [targetCRate, setTargetCRate] = useState<number>(1.5);
   const [camerasLinked, setCamerasLinked] = useState<boolean>(true);
-  const [sharedPose, setSharedPose] = useState<SharedCameraPose | null>(null);
+  const cameraSyncBus = useMemo(() => createCameraSyncBus(), []);
   const [mobilePack, setMobilePack] = useState<ArchitectureId>("LFP_BLADE");
 
   const [running, setRunning] = useState(false);
@@ -223,8 +223,7 @@ export function ComparePage(): React.ReactElement {
                       overrideTempRange={sharedTempRange}
                       overrideExplodePercent={35}
                       syncId={camerasLinked ? arch : undefined}
-                      externalPose={camerasLinked ? sharedPose : null}
-                      onBroadcastPose={camerasLinked ? setSharedPose : undefined}
+                      cameraSyncBus={camerasLinked ? cameraSyncBus : undefined}
                     />
                   </Suspense>
                 </div>

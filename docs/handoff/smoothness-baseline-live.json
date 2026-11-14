@@ -1,0 +1,89 @@
+{
+ "landingAutoRotate": {
+  "renders": 240,
+  "renderFps": 60,
+  "p50": 16.7,
+  "p95": 17.2,
+  "max": 17.8,
+  "gaps33": 0,
+  "gaps50": 0,
+  "loafCount": 0,
+  "loafWorst": []
+ },
+ "lfpAutoOrbit": {
+  "renders": 240,
+  "renderFps": 60,
+  "p50": 16.7,
+  "p95": 17.5,
+  "max": 18,
+  "gaps33": 0,
+  "gaps50": 0,
+  "loafCount": 0,
+  "loafWorst": []
+ },
+ "nmcAutoOrbit": {
+  "renders": 241,
+  "renderFps": 60,
+  "p50": 16.7,
+  "p95": 17.4,
+  "max": 17.7,
+  "gaps33": 0,
+  "gaps50": 0,
+  "loafCount": 0,
+  "loafWorst": []
+ },
+ "nmcDrag": {
+  "renders": 179,
+  "renderFps": 59.8,
+  "p50": 16.7,
+  "p95": 17.7,
+  "max": 37.5,
+  "gaps33": 2,
+  "gaps50": 0,
+  "loafCount": 1,
+  "loafWorst": [
+   {
+    "d": 52,
+    "b": 0,
+    "s": [
+     "zv@three-CSXGxhrc.js:35"
+    ]
+   }
+  ]
+ },
+ "nmcExplodePlay": {
+  "renders": 181,
+  "renderFps": 60,
+  "p50": 16.7,
+  "p95": 17.3,
+  "max": 17.7,
+  "gaps33": 0,
+  "gaps50": 0,
+  "loafCount": 0,
+  "loafWorst": []
+ },
+ "nmcHeatmapPlayback": {
+  "renders": 61,
+  "renderFps": 15.1,
+  "p50": 105,
+  "p95": 133.7,
+  "max": 133.8,
+  "gaps33": 33,
+  "gaps50": 32,
+  "loafCount": 0,
+  "loafWorst": []
+ },
+ "compare": {
+  "renders": 0,
+  "renderFps": 0,
+  "p50": null,
+  "p95": null,
+  "max": null,
+  "gaps33": 0,
+  "gaps50": 0,
+  "loafCount": 0,
+  "loafWorst": []
+ }
+}
+
+[exited with code 0]

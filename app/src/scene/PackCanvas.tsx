@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, events as createPointerEvents, useFrame, useThree, type RootStore } from "@react-three/fiber";
 import { Layers, Pause, Play, RotateCcw, Scissors, Thermometer } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { UI_STRINGS } from "../content/strings";
 import type { ArchitectureId, ThermalResult } from "../domain/contracts";
 import { getPackDefinition } from "../domain/dataLoaders";
@@ -11,7 +12,14 @@ import { InlineBanner } from "../ui/Primitives";
 import { CameraRig, ClippingPlaneOverlay, type SharedCameraPose } from "./components/CameraAndClipControllers";
 import { LfpBladeAssembly } from "./components/LfpBladeAssembly";
 import { Nmc4680Assembly } from "./components/Nmc4680Assembly";
+import { OutlineShaderPrewarm } from "./components/SelectableMesh";
 import { ThermalLegend } from "./components/ThermalLegend";
+import {
+  computeFractionalSampleIndex,
+  computeThermalResultRange,
+  interpolateZoneTemperatures,
+} from "./controllers/playbackController";
+import { createHoverBus, type CameraSyncBus } from "./controllers/sceneInteractionBus";
 
 function checkWebGLSupport(): boolean {
   try {
@@ -21,6 +29,186 @@ function checkWebGLSupport(): boolean {
     return false;
   }
 }
+
+const EXPLODE_DURATION_MS = 2400;
+
+interface SceneAnimationDriversProps {
+  effectiveResult: ThermalResult | null;
+  playbackPlaying: boolean;
+  sampleIndexRef: React.MutableRefObject<number>;
+  lastCommittedSampleRef: React.MutableRefObject<number>;
+  explodePlaying: boolean;
+  explodePercentRef: React.MutableRefObject<number>;
+  explodeSliderRef: React.RefObject<HTMLInputElement | null>;
+  explodeLabelRef: React.RefObject<HTMLSpanElement | null>;
+  onExplodeFinished: () => void;
+  invalidateRef: React.MutableRefObject<(() => void) | null>;
+}
+
+function SceneAnimationDrivers({
+  effectiveResult,
+  playbackPlaying,
+  sampleIndexRef,
+  lastCommittedSampleRef,
+  explodePlaying,
+  explodePercentRef,
+  explodeSliderRef,
+  explodeLabelRef,
+  onExplodeFinished,
+  invalidateRef,
+}: SceneAnimationDriversProps): null {
+  const { invalidate } = useThree();
+  invalidateRef.current = invalidate;
+
+  useEffect(() => {
+    if (playbackPlaying || explodePlaying) {
+      invalidate();
+    }
+  }, [playbackPlaying, explodePlaying, invalidate]);
+
+  useFrame((_, delta) => {
+    const deltaMs = Math.min(delta * 1000, 100);
+
+    if (playbackPlaying && effectiveResult && effectiveResult.nSamples > 1) {
+      const nextCursor = computeFractionalSampleIndex(
+        sampleIndexRef.current,
+        deltaMs,
+        effectiveResult.nSamples
+      );
+      sampleIndexRef.current = nextCursor;
+
+      const intIdx = Math.floor(nextCursor);
+      if (intIdx !== lastCommittedSampleRef.current) {
+        lastCommittedSampleRef.current = intIdx;
+        useWorkspaceStore.getState().setPlaybackSampleIndex(intIdx);
+      }
+      invalidate();
+    }
+
+    if (explodePlaying) {
+      const nextPct = Math.min(explodePercentRef.current + (deltaMs / EXPLODE_DURATION_MS) * 100, 100);
+      explodePercentRef.current = nextPct;
+      const rounded = Math.round(nextPct);
+      if (explodeSliderRef.current) {
+        explodeSliderRef.current.value = String(rounded);
+      }
+      if (explodeLabelRef.current) {
+        explodeLabelRef.current.textContent = `${rounded}%`;
+      }
+      if (nextPct < 100) {
+        invalidate();
+      } else {
+        useWorkspaceStore.getState().setExplodePercent(100);
+        onExplodeFinished();
+      }
+    }
+  });
+
+  return null;
+}
+
+const LiveThermalLegend = React.memo(function LiveThermalLegend({
+  result,
+  minC,
+  maxC,
+  overrideSampleIndex,
+  defaultZoneId,
+}: {
+  result: ThermalResult;
+  minC: number;
+  maxC: number;
+  overrideSampleIndex?: number;
+  defaultZoneId: string;
+}): React.ReactElement {
+  const storeSampleIdx = useWorkspaceStore((s) => s.simPlaybackSampleIndex);
+  const sampleIdx = overrideSampleIndex !== undefined ? overrideSampleIndex : storeSampleIdx;
+
+  const { peakTempC, hottestZoneId } = useMemo(() => {
+    const temps = new Float32Array(Math.max(result.zoneIds.length, 1));
+    const { peakTempC: peak, hotZoneIndex } = interpolateZoneTemperatures(result, sampleIdx, temps);
+    return {
+      peakTempC: peak,
+      hottestZoneId: result.zoneIds[hotZoneIndex] ?? result.summary.hottestZoneId ?? defaultZoneId,
+    };
+  }, [result, sampleIdx, defaultZoneId]);
+
+  return (
+    <ThermalLegend
+      minC={minC}
+      maxC={maxC}
+      hottestZoneId={hottestZoneId}
+      peakTempC={peakTempC}
+    />
+  );
+});
+
+const PackLiveRegion = React.memo(function PackLiveRegion({
+  packDisplayName,
+  defaultZoneId,
+  overrideResult,
+  overrideSampleIndex,
+  overrideHeatmapOn,
+  overrideExplodePercent,
+  compactHero,
+}: {
+  packDisplayName: string;
+  defaultZoneId: string;
+  overrideResult?: ThermalResult | null;
+  overrideSampleIndex?: number;
+  overrideHeatmapOn?: boolean;
+  overrideExplodePercent?: number;
+  compactHero: boolean;
+}): React.ReactElement {
+  const {
+    explodePercent,
+    crossSectionEnabled,
+    crossSectionPosition,
+    heatmapEnabled,
+    thermalResult,
+    simPlaybackSampleIndex,
+    selectedComponentId,
+    selectedCellId,
+  } = useWorkspaceStore(
+    useShallow((s) => ({
+      explodePercent: s.explodePercent,
+      crossSectionEnabled: s.crossSectionEnabled,
+      crossSectionPosition: s.crossSectionPosition,
+      heatmapEnabled: s.heatmapEnabled,
+      thermalResult: s.thermalResult,
+      simPlaybackSampleIndex: s.simPlaybackSampleIndex,
+      selectedComponentId: s.selectedComponentId,
+      selectedCellId: s.selectedCellId,
+    }))
+  );
+
+  const effectiveResult = overrideResult !== undefined ? overrideResult : thermalResult;
+  const effectiveSampleIdx = overrideSampleIndex !== undefined ? overrideSampleIndex : simPlaybackSampleIndex;
+  const effectiveHeatmapOn =
+    overrideHeatmapOn !== undefined ? overrideHeatmapOn : heatmapEnabled && effectiveResult !== null;
+  const effectiveExplodePct =
+    overrideExplodePercent !== undefined ? overrideExplodePercent : compactHero ? 65 : explodePercent;
+
+  let peakC = 25;
+  let hotZoneId = defaultZoneId;
+  if (effectiveHeatmapOn && effectiveResult) {
+    const temps = new Float32Array(Math.max(effectiveResult.zoneIds.length, 1));
+    const info = interpolateZoneTemperatures(effectiveResult, effectiveSampleIdx, temps);
+    peakC = info.peakTempC;
+    hotZoneId = effectiveResult.zoneIds[info.hotZoneIndex] ?? effectiveResult.summary.hottestZoneId ?? defaultZoneId;
+  }
+
+  const liveAnnouncement = `${packDisplayName}. Explode ${effectiveExplodePct}%. Cross-section ${
+    crossSectionEnabled ? `enabled at ${Math.round(crossSectionPosition * 100)}%` : "off"
+  }. Heatmap ${
+    effectiveHeatmapOn && effectiveResult ? `on, maximum ${peakC.toFixed(1)} °C in ${hotZoneId}` : "off"
+  }.${selectedComponentId ? ` Selected ${selectedCellId ?? selectedComponentId}.` : ""}`;
+
+  return (
+    <div className="sr-only" aria-live="polite">
+      {liveAnnouncement}
+    </div>
+  );
+});
 
 export interface PackCanvasProps {
   architecture: ArchitectureId;
@@ -32,6 +220,7 @@ export interface PackCanvasProps {
   compactHero?: boolean;
   onHeroExitToStill?: () => void;
   syncId?: string;
+  cameraSyncBus?: CameraSyncBus;
   externalPose?: SharedCameraPose | null;
   onBroadcastPose?: (pose: SharedCameraPose) => void;
 }
@@ -46,103 +235,219 @@ export function PackCanvas({
   compactHero = false,
   onHeroExitToStill,
   syncId,
+  cameraSyncBus,
   externalPose,
   onBroadcastPose,
 }: PackCanvasProps): React.ReactElement {
-  const store = useWorkspaceStore();
   const pack = getPackDefinition(architecture);
 
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const storeThermalResult = useWorkspaceStore((s) => s.thermalResult);
+  const storeHeatmapEnabled = useWorkspaceStore((s) => s.heatmapEnabled);
+  const storePlaybackPlaying = useWorkspaceStore((s) => s.simPlaybackPlaying);
+  const storeExplodePercent = useWorkspaceStore((s) => s.explodePercent);
+  const componentVisibility = useWorkspaceStore((s) => s.componentVisibility);
+
+  const { selectedComponentId, selectedZoneId, selectedCellId } = useWorkspaceStore(
+    useShallow((s) => ({
+      selectedComponentId: s.selectedComponentId,
+      selectedZoneId: s.selectedZoneId,
+      selectedCellId: s.selectedCellId,
+    }))
+  );
+
+  const { crossSectionEnabled, crossSectionPosition, crossSectionFlipped } = useWorkspaceStore(
+    useShallow((s) => ({
+      crossSectionEnabled: s.crossSectionEnabled,
+      crossSectionPosition: s.crossSectionPosition,
+      crossSectionFlipped: s.crossSectionFlipped,
+    }))
+  );
+
+  const { qualityTier, cameraPreset, cameraRequestNonce, c3AutoRotate } = useWorkspaceStore(
+    useShallow((s) => ({
+      qualityTier: s.qualityTier,
+      cameraPreset: s.cameraPreset,
+      cameraRequestNonce: s.cameraRequestNonce,
+      c3AutoRotate: s.c3AutoRotate,
+    }))
+  );
+
   const [webglAvailable, setWebglAvailable] = useState<boolean>(() => checkWebGLSupport());
   const [contextLost, setContextLost] = useState<boolean>(false);
   const [canvasKey, setCanvasKey] = useState(0);
   const [explodePlaying, setExplodePlaying] = useState(false);
-  const [localMetrics, setLocalMetrics] = useState<{ drawCalls: number; triangles: number; lastFrameMs: number } | null>(null);
 
   const keyboardCmdRef = useRef<{ type: "orbit" | "zoom"; dx: number; dy: number } | null>(null);
-  const liveAnnouncementRef = useRef<string>("");
+  const isOrbitDraggingRef = useRef<boolean>(false);
+  const telemetryElRef = useRef<HTMLDivElement>(null);
+  const hoverChipRef = useRef<HTMLDivElement>(null);
+  const explodeSliderRef = useRef<HTMLInputElement>(null);
+  const explodeLabelRef = useRef<HTMLSpanElement>(null);
+  const invalidateRef = useRef<(() => void) | null>(null);
 
-  const effectiveResult = overrideResult !== undefined ? overrideResult : store.thermalResult;
-  const effectiveSampleIdx =
-    overrideSampleIndex !== undefined ? overrideSampleIndex : store.simPlaybackSampleIndex;
+  const effectiveResult = overrideResult !== undefined ? overrideResult : storeThermalResult;
   const effectiveHeatmapOn =
-    overrideHeatmapOn !== undefined ? overrideHeatmapOn : store.heatmapEnabled && effectiveResult !== null;
+    overrideHeatmapOn !== undefined ? overrideHeatmapOn : storeHeatmapEnabled && effectiveResult !== null;
   const effectiveExplodePct =
-    overrideExplodePercent !== undefined ? overrideExplodePercent : compactHero ? 65 : store.explodePercent;
+    overrideExplodePercent !== undefined ? overrideExplodePercent : compactHero ? 65 : storeExplodePercent;
+  const isPlayingHeatmap = overrideResult === undefined && storePlaybackPlaying && effectiveResult !== null;
 
-  const { zoneTempsAtSample, computedRange, samplePeakC, sampleHotZoneId } = useMemo(() => {
-    if (!effectiveResult) {
-      return {
-        zoneTempsAtSample: undefined,
-        computedRange: [25, 55] as [number, number],
-        samplePeakC: 25,
-        sampleHotZoneId: pack.zones[0]?.id ?? "pack.zone_01",
-      };
-    }
-    const nZ = effectiveResult.zoneIds.length;
-    const nS = effectiveResult.nSamples;
-    const sIdx = Math.min(Math.max(effectiveSampleIdx, 0), Math.max(nS - 1, 0));
-    const slice: number[] = [];
-    let curMax = -Infinity;
-    let curHotIdx = 0;
-    let globalMin = Infinity;
-    let globalMax = -Infinity;
-    for (let i = 0; i < effectiveResult.zoneTemperaturesC.length; i++) {
-      const val = effectiveResult.zoneTemperaturesC[i] ?? 25;
-      if (val < globalMin) globalMin = val;
-      if (val > globalMax) globalMax = val;
-    }
-    for (let z = 0; z < nZ; z++) {
-      const t = effectiveResult.zoneTemperaturesC[z * nS + sIdx] ?? 25;
-      slice.push(t);
-      if (t > curMax) {
-        curMax = t;
-        curHotIdx = z;
-      }
-    }
-    const minBound = Math.floor(Math.min(globalMin, 25));
-    const maxBound = Math.ceil(Math.max(globalMax, minBound + 5));
-    return {
-      zoneTempsAtSample: slice,
-      computedRange: [minBound, maxBound] as [number, number],
-      samplePeakC: curMax,
-      sampleHotZoneId: effectiveResult.zoneIds[curHotIdx] ?? effectiveResult.summary.hottestZoneId,
-    };
-  }, [effectiveResult, effectiveSampleIdx, pack.zones]);
+  const sampleIndexRef = useRef<number>(
+    overrideSampleIndex !== undefined
+      ? overrideSampleIndex
+      : useWorkspaceStore.getState().simPlaybackSampleIndex
+  );
+  const lastCommittedSampleRef = useRef<number>(Math.floor(sampleIndexRef.current));
+  const colorDirtyRef = useRef<boolean>(true);
+  const explodePercentRef = useRef<number>(effectiveExplodePct);
 
+  // Sync explodePercentRef when committed store value or override prop changes
+  useEffect(() => {
+    explodePercentRef.current = effectiveExplodePct;
+    if (explodeSliderRef.current) {
+      explodeSliderRef.current.value = String(effectiveExplodePct);
+    }
+    if (explodeLabelRef.current) {
+      explodeLabelRef.current.textContent = `${effectiveExplodePct}%`;
+    }
+  }, [effectiveExplodePct]);
+
+  // Reset sample cursor when starting playback from the last frame or changing results
+  useEffect(() => {
+    if (overrideSampleIndex !== undefined) {
+      sampleIndexRef.current = overrideSampleIndex;
+      lastCommittedSampleRef.current = Math.floor(overrideSampleIndex);
+      colorDirtyRef.current = true;
+      invalidateRef.current?.();
+      return;
+    }
+    const idx = useWorkspaceStore.getState().simPlaybackSampleIndex;
+    sampleIndexRef.current = idx;
+    lastCommittedSampleRef.current = Math.floor(idx);
+    colorDirtyRef.current = true;
+    invalidateRef.current?.();
+  }, [effectiveResult, overrideSampleIndex]);
+
+  useEffect(() => {
+    if (!isPlayingHeatmap || !effectiveResult) return;
+    const sIdx = useWorkspaceStore.getState().simPlaybackSampleIndex;
+    if (sIdx >= effectiveResult.nSamples - 1) {
+      sampleIndexRef.current = 0;
+      lastCommittedSampleRef.current = 0;
+      useWorkspaceStore.getState().setPlaybackSampleIndex(0);
+    } else {
+      sampleIndexRef.current = sIdx;
+      lastCommittedSampleRef.current = sIdx;
+    }
+    colorDirtyRef.current = true;
+  }, [isPlayingHeatmap, effectiveResult]);
+
+  // Listen to manual scrubber updates without re-rendering PackCanvas
+  useEffect(() => {
+    if (overrideSampleIndex !== undefined) return;
+    return useWorkspaceStore.subscribe((state, prev) => {
+      if (state.simPlaybackSampleIndex === prev.simPlaybackSampleIndex) return;
+      if (state.simPlaybackPlaying) return;
+      sampleIndexRef.current = state.simPlaybackSampleIndex;
+      lastCommittedSampleRef.current = state.simPlaybackSampleIndex;
+      colorDirtyRef.current = true;
+      invalidateRef.current?.();
+    });
+  }, [overrideSampleIndex]);
+
+  const packRef = useRef(pack);
+  packRef.current = pack;
+
+  const hoverBus = useMemo(
+    () =>
+      createHoverBus((id) => {
+        const chip = hoverChipRef.current;
+        if (!chip) return;
+        if (!id) {
+          chip.style.opacity = "0";
+          chip.style.visibility = "hidden";
+          chip.textContent = "";
+        } else {
+          const label = packRef.current.components.find((c) => c.id === id)?.name ?? id;
+          chip.textContent = label;
+          chip.style.visibility = "visible";
+          chip.style.opacity = "1";
+        }
+      }),
+    []
+  );
+
+  // Clear hover chip when switching architecture
+  useEffect(() => {
+    hoverBus.setHovered(null);
+  }, [architecture, hoverBus]);
+
+  const computedRange = useMemo(
+    () => (effectiveResult ? computeThermalResultRange(effectiveResult) : ([25, 55] as [number, number])),
+    [effectiveResult]
+  );
   const tempRangeC = overrideTempRange ?? computedRange;
 
   const packLengthM = pack.envelopeMm.lengthX / 1000.0;
-  const clipWorldX = (store.crossSectionPosition - 0.5) * packLengthM;
+  const clipWorldX = (crossSectionPosition - 0.5) * packLengthM;
 
   const clippingPlanes = useMemo(() => {
-    if (!store.crossSectionEnabled) return [];
-    const nx = store.crossSectionFlipped ? 1 : -1;
-    const constant = store.crossSectionFlipped ? -clipWorldX : clipWorldX;
+    if (!crossSectionEnabled) return [];
+    const nx = crossSectionFlipped ? 1 : -1;
+    const constant = crossSectionFlipped ? -clipWorldX : clipWorldX;
     return [new THREE.Plane(new THREE.Vector3(nx, 0, 0), constant)];
-  }, [store.crossSectionEnabled, store.crossSectionFlipped, clipWorldX]);
+  }, [crossSectionEnabled, crossSectionFlipped, clipWorldX]);
 
-  // Smooth 2.4s guided Explode playback when Play button clicked (03 §3.1)
-  useEffect(() => {
-    if (!explodePlaying) return;
-    const startPct = store.explodePercent >= 99 ? 0 : store.explodePercent;
-    const startMs = performance.now();
-    const totalMs = 2400 * ((100 - startPct) / 100);
+  // Custom R3F pointer event manager: skip hover raycasts while OrbitControls is dragging and throttle move to rAF
+  const createCanvasEvents = useCallback((r3fStore: RootStore) => {
+    const manager = createPointerEvents(r3fStore);
+    const handlers = manager.handlers;
+    if (!handlers) return manager;
+
+    const origMove = handlers.onPointerMove;
+    const origLeave = handlers.onPointerLeave;
+    const origDisconnect = manager.disconnect;
     let rafId = 0;
+    let pendingEv: Event | null = null;
 
-    const step = (now: number) => {
-      const p = Math.min((now - startMs) / Math.max(totalMs, 1), 1);
-      store.setExplodePercent(Math.round(startPct + p * (100 - startPct)));
-      if (p < 1) {
-        rafId = requestAnimationFrame(step);
-      } else {
-        setExplodePlaying(false);
+    handlers.onPointerMove = (ev: Event) => {
+      const pe = ev as PointerEvent;
+      if (isOrbitDraggingRef.current || pe.buttons !== 0) {
+        return;
+      }
+      pendingEv = ev;
+      if (!rafId) {
+        rafId = requestAnimationFrame(() => {
+          rafId = 0;
+          const next = pendingEv;
+          pendingEv = null;
+          if (next && !isOrbitDraggingRef.current) {
+            origMove(next);
+          }
+        });
       }
     };
-    rafId = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(rafId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [explodePlaying]);
+
+    handlers.onPointerLeave = (ev: Event) => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      pendingEv = null;
+      origLeave(ev);
+    };
+
+    manager.disconnect = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      pendingEv = null;
+      origDisconnect?.();
+    };
+
+    return manager;
+  }, []);
 
   // Allow pressing 'H' anywhere in the workspace (outside form controls) to toggle thermal heatmap
   useEffect(() => {
@@ -152,7 +457,8 @@ export function PackCanvas({
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
       if ((e.key === "h" || e.key === "H") && effectiveResult) {
         e.preventDefault();
-        useWorkspaceStore.getState().setHeatmapEnabled(!useWorkspaceStore.getState().heatmapEnabled);
+        const st = useWorkspaceStore.getState();
+        st.setHeatmapEnabled(!st.heatmapEnabled);
       }
     };
     window.addEventListener("keydown", onWindowKey);
@@ -162,76 +468,114 @@ export function PackCanvas({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+      const st = useWorkspaceStore.getState();
       switch (e.key) {
         case "ArrowLeft":
           e.preventDefault();
-          store.setC3AutoRotate(false);
+          st.setC3AutoRotate(false);
           keyboardCmdRef.current = { type: "orbit", dx: 0.12, dy: 0 };
+          invalidateRef.current?.();
           break;
         case "ArrowRight":
           e.preventDefault();
-          store.setC3AutoRotate(false);
+          st.setC3AutoRotate(false);
           keyboardCmdRef.current = { type: "orbit", dx: -0.12, dy: 0 };
+          invalidateRef.current?.();
           break;
         case "ArrowUp":
           e.preventDefault();
-          store.setC3AutoRotate(false);
+          st.setC3AutoRotate(false);
           keyboardCmdRef.current = { type: "orbit", dx: 0, dy: -0.1 };
+          invalidateRef.current?.();
           break;
         case "ArrowDown":
           e.preventDefault();
-          store.setC3AutoRotate(false);
+          st.setC3AutoRotate(false);
           keyboardCmdRef.current = { type: "orbit", dx: 0, dy: 0.1 };
+          invalidateRef.current?.();
           break;
         case "+":
         case "=":
           e.preventDefault();
           keyboardCmdRef.current = { type: "zoom", dx: -0.2, dy: 0 };
+          invalidateRef.current?.();
           break;
         case "-":
           e.preventDefault();
           keyboardCmdRef.current = { type: "zoom", dx: 0.2, dy: 0 };
+          invalidateRef.current?.();
           break;
         case "r":
         case "R":
           e.preventDefault();
-          store.requestCameraPreset("iso");
+          st.requestCameraPreset("iso");
           break;
         case "e":
         case "E":
           e.preventDefault();
-          store.setExplodePercent(store.explodePercent > 50 ? 0 : 100);
+          setExplodePlaying(false);
+          st.setExplodePercent(st.explodePercent > 50 ? 0 : 100);
           break;
         case "x":
         case "X":
           e.preventDefault();
-          store.setCrossSection({ enabled: !store.crossSectionEnabled });
+          st.setCrossSection({ enabled: !st.crossSectionEnabled });
           break;
         case "h":
         case "H":
           if (effectiveResult) {
             e.preventDefault();
-            store.setHeatmapEnabled(!store.heatmapEnabled);
+            st.setHeatmapEnabled(!st.heatmapEnabled);
           }
           break;
         case "Escape":
-          store.selectComponent(null);
+          st.selectComponent(null);
           break;
         default:
           break;
       }
     },
-    [store, effectiveResult]
+    [effectiveResult]
   );
 
-  const liveAnnouncement = `${pack.displayName}. Explode ${effectiveExplodePct}%. Cross-section ${
-    store.crossSectionEnabled ? `enabled at ${Math.round(store.crossSectionPosition * 100)}%` : "off"
-  }. Heatmap ${
-    effectiveHeatmapOn && effectiveResult
-      ? `on, maximum ${samplePeakC.toFixed(1)} °C in ${sampleHotZoneId}`
-      : "off"
-  }.${store.selectedComponentId ? ` Selected ${store.selectedCellId ?? store.selectedComponentId}.` : ""}`;
-  liveAnnouncementRef.current = liveAnnouncement;
+  const handleSelectPart = useCallback(
+    (id: string, zoneId?: string | null, cellId?: string | null) => {
+      if (compactHero) return;
+      const st = useWorkspaceStore.getState();
+      st.setC3AutoRotate(false);
+      st.selectComponent(id, zoneId, cellId);
+    },
+    [compactHero]
+  );
+
+  const handleHoverPart = useCallback(
+    (id: string | null) => {
+      if (compactHero) return;
+      hoverBus.setHovered(id);
+    },
+    [compactHero, hoverBus]
+  );
+
+  const handleUserInteract = useCallback(() => {
+    useWorkspaceStore.getState().setC3AutoRotate(false);
+  }, []);
+
+  const handleExplodeFinished = useCallback(() => {
+    setExplodePlaying(false);
+  }, []);
+
+  const handleToggleExplodePlay = useCallback(() => {
+    if (explodePlaying) {
+      setExplodePlaying(false);
+      useWorkspaceStore.getState().setExplodePercent(Math.round(explodePercentRef.current));
+      return;
+    }
+    if (explodePercentRef.current >= 99) {
+      explodePercentRef.current = 0;
+      useWorkspaceStore.getState().setExplodePercent(0);
+    }
+    setExplodePlaying(true);
+  }, [explodePlaying]);
 
   if (!webglAvailable || contextLost) {
     return (
@@ -256,7 +600,7 @@ export function PackCanvas({
         <div style={{ margin: "auto 0" }}>
           <PackSchematicPoster
             architecture={architecture}
-            mode={store.crossSectionEnabled ? "cutaway" : store.explodePercent > 20 ? "exploded" : "assembled"}
+            mode={crossSectionEnabled ? "cutaway" : storeExplodePercent > 20 ? "exploded" : "assembled"}
             forceSvg
           />
         </div>
@@ -277,9 +621,15 @@ export function PackCanvas({
         outline: "none",
       }}
     >
-      <div className="sr-only" aria-live="polite">
-        {liveAnnouncement}
-      </div>
+      <PackLiveRegion
+        packDisplayName={pack.displayName}
+        defaultZoneId={pack.zones[0]?.id ?? "pack.zone_01"}
+        overrideResult={overrideResult}
+        overrideSampleIndex={overrideSampleIndex}
+        overrideHeatmapOn={overrideHeatmapOn}
+        overrideExplodePercent={overrideExplodePercent}
+        compactHero={compactHero}
+      />
 
       {!compactHero && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
@@ -288,8 +638,8 @@ export function PackCanvas({
               <button
                 key={p}
                 type="button"
-                className={`btn btn-sm ${store.cameraPreset === p ? "btn-primary" : "btn-secondary"}`}
-                onClick={() => store.requestCameraPreset(p)}
+                className={`btn btn-sm ${cameraPreset === p ? "btn-primary" : "btn-secondary"}`}
+                onClick={() => useWorkspaceStore.getState().requestCameraPreset(p)}
               >
                 {p.charAt(0).toUpperCase() + p.slice(1)}
               </button>
@@ -297,7 +647,7 @@ export function PackCanvas({
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              onClick={() => store.requestCameraPreset("iso")}
+              onClick={() => useWorkspaceStore.getState().requestCameraPreset("iso")}
               title="Reset camera view (R)"
             >
               <RotateCcw size={14} strokeWidth={1.5} aria-hidden="true" />
@@ -309,12 +659,12 @@ export function PackCanvas({
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              onClick={() => store.setC3AutoRotate(!store.c3AutoRotate)}
-              aria-pressed={store.c3AutoRotate}
+              onClick={() => useWorkspaceStore.getState().setC3AutoRotate(!c3AutoRotate)}
+              aria-pressed={c3AutoRotate}
               title="Toggle slow showcase rotation (C3)"
             >
-              {store.c3AutoRotate ? <Pause size={14} strokeWidth={1.5} /> : <Play size={14} strokeWidth={1.5} />}
-              <span>{store.c3AutoRotate ? "Pause orbit" : "Auto-orbit"}</span>
+              {c3AutoRotate ? <Pause size={14} strokeWidth={1.5} /> : <Play size={14} strokeWidth={1.5} />}
+              <span>{c3AutoRotate ? "Pause orbit" : "Auto-orbit"}</span>
             </button>
 
             <label htmlFor="quality-select" className="sr-only">
@@ -324,8 +674,8 @@ export function PackCanvas({
               id="quality-select"
               className="field-select mono-num"
               style={{ width: "auto", minHeight: "32px", fontSize: "12px" }}
-              value={store.qualityTier}
-              onChange={(e) => store.setQualityTier(e.target.value as QualityTier)}
+              value={qualityTier}
+              onChange={(e) => useWorkspaceStore.getState().setQualityTier(e.target.value as QualityTier)}
             >
               <option value="high">Quality: High</option>
               <option value="medium">Quality: Medium</option>
@@ -350,14 +700,15 @@ export function PackCanvas({
         <Canvas
           key={canvasKey}
           frameloop="demand"
-          dpr={store.qualityTier === "low" ? 1 : [1, 2]}
+          events={createCanvasEvents}
+          dpr={qualityTier === "low" ? 1 : [1, 2]}
           camera={{ position: [1.5, 1.05, 1.5], fov: 40, near: 0.05, far: 40 }}
           gl={{
-            antialias: store.qualityTier !== "low",
+            antialias: qualityTier !== "low",
             localClippingEnabled: true,
             powerPreference: "high-performance",
           }}
-          onPointerMissed={() => store.selectComponent(null)}
+          onPointerMissed={() => useWorkspaceStore.getState().selectComponent(null)}
           onCreated={({ gl }) => {
             gl.domElement.addEventListener("webglcontextlost", (ev) => {
               ev.preventDefault();
@@ -366,79 +717,91 @@ export function PackCanvas({
           }}
         >
           <color attach="background" args={["#0b0d10"]} />
+          <OutlineShaderPrewarm />
           {/* Neutral studio lighting (02 §8: one key, soft fill, zero coloured lights) */}
           <ambientLight intensity={0.45} />
           <hemisphereLight args={["#dfe7f0", "#1e2630", 0.72]} />
           <directionalLight position={[3.5, 5.5, 4]} intensity={1.35} color="#ffffff" />
           <directionalLight position={[-3.5, 2.5, -3.5]} intensity={0.68} color="#ffffff" />
 
+          <SceneAnimationDrivers
+            effectiveResult={effectiveResult}
+            playbackPlaying={isPlayingHeatmap}
+            sampleIndexRef={sampleIndexRef}
+            lastCommittedSampleRef={lastCommittedSampleRef}
+            explodePlaying={explodePlaying}
+            explodePercentRef={explodePercentRef}
+            explodeSliderRef={explodeSliderRef}
+            explodeLabelRef={explodeLabelRef}
+            onExplodeFinished={handleExplodeFinished}
+            invalidateRef={invalidateRef}
+          />
+
           {architecture === "LFP_BLADE" ? (
             <LfpBladeAssembly
               pack={pack}
               explodePercent={effectiveExplodePct}
-              visibility={store.componentVisibility}
-              selectedComponentId={compactHero ? null : store.selectedComponentId}
-              selectedZoneId={compactHero ? null : store.selectedZoneId}
-              selectedCellId={compactHero ? null : store.selectedCellId}
-              hoveredId={compactHero ? null : hoveredId}
+              explodePercentRef={explodePercentRef}
+              visibility={componentVisibility}
+              selectedComponentId={compactHero ? null : selectedComponentId}
+              selectedZoneId={compactHero ? null : selectedZoneId}
+              selectedCellId={compactHero ? null : selectedCellId}
+              hoverBus={compactHero ? undefined : hoverBus}
               heatmapEnabled={effectiveHeatmapOn}
-              zoneTemperaturesC={zoneTempsAtSample}
+              thermalResult={effectiveResult}
+              sampleIndexRef={sampleIndexRef}
+              playbackPlaying={isPlayingHeatmap}
+              colorDirtyRef={colorDirtyRef}
               tempRangeC={tempRangeC}
-              qualityTier={store.qualityTier}
+              qualityTier={qualityTier}
               clippingPlanes={compactHero ? [] : clippingPlanes}
-              onSelectPart={(id, zoneId, cellId) => {
-                if (compactHero) return;
-                store.setC3AutoRotate(false);
-                store.selectComponent(id, zoneId, cellId);
-              }}
-              onHoverPart={compactHero ? () => {} : setHoveredId}
+              onSelectPart={handleSelectPart}
+              onHoverPart={handleHoverPart}
             />
           ) : (
             <Nmc4680Assembly
               pack={pack}
               explodePercent={effectiveExplodePct}
-              visibility={store.componentVisibility}
-              selectedComponentId={compactHero ? null : store.selectedComponentId}
-              selectedZoneId={compactHero ? null : store.selectedZoneId}
-              selectedCellId={compactHero ? null : store.selectedCellId}
-              hoveredId={compactHero ? null : hoveredId}
+              explodePercentRef={explodePercentRef}
+              visibility={componentVisibility}
+              selectedComponentId={compactHero ? null : selectedComponentId}
+              selectedZoneId={compactHero ? null : selectedZoneId}
+              selectedCellId={compactHero ? null : selectedCellId}
+              hoverBus={compactHero ? undefined : hoverBus}
               heatmapEnabled={effectiveHeatmapOn}
-              zoneTemperaturesC={zoneTempsAtSample}
+              thermalResult={effectiveResult}
+              sampleIndexRef={sampleIndexRef}
+              playbackPlaying={isPlayingHeatmap}
+              colorDirtyRef={colorDirtyRef}
               tempRangeC={tempRangeC}
-              qualityTier={store.qualityTier}
+              qualityTier={qualityTier}
               clippingPlanes={compactHero ? [] : clippingPlanes}
-              onSelectPart={(id, zoneId, cellId) => {
-                if (compactHero) return;
-                store.setC3AutoRotate(false);
-                store.selectComponent(id, zoneId, cellId);
-              }}
-              onHoverPart={compactHero ? () => {} : setHoveredId}
+              onSelectPart={handleSelectPart}
+              onHoverPart={handleHoverPart}
             />
           )}
 
           {!compactHero && (
             <ClippingPlaneOverlay
-              enabled={store.crossSectionEnabled}
+              enabled={crossSectionEnabled}
               worldX={clipWorldX}
-              flipped={store.crossSectionFlipped}
+              flipped={crossSectionFlipped}
             />
           )}
 
           <CameraRig
             architecture={architecture}
             explodePercent={effectiveExplodePct}
-            cameraPreset={compactHero ? "iso" : store.cameraPreset}
-            cameraRequestNonce={store.cameraRequestNonce}
-            c3AutoRotate={store.c3AutoRotate}
+            cameraPreset={compactHero ? "iso" : cameraPreset}
+            cameraRequestNonce={cameraRequestNonce}
+            c3AutoRotate={c3AutoRotate}
+            qualityTier={qualityTier}
             keyboardCommandRef={keyboardCmdRef}
-            onUserInteract={() => store.setC3AutoRotate(false)}
-            onReportMetrics={(m) => {
-              setLocalMetrics(m);
-              if (!syncId) {
-                store.setSceneRenderMetrics(m);
-              }
-            }}
+            isOrbitDraggingRef={isOrbitDraggingRef}
+            telemetryElRef={telemetryElRef}
+            onUserInteract={handleUserInteract}
             syncId={syncId}
+            cameraSyncBus={cameraSyncBus}
             externalPose={externalPose}
             onBroadcastPose={onBroadcastPose}
           />
@@ -450,11 +813,11 @@ export function PackCanvas({
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              onClick={() => store.setC3AutoRotate(!store.c3AutoRotate)}
-              aria-pressed={!store.c3AutoRotate}
+              onClick={() => useWorkspaceStore.getState().setC3AutoRotate(!c3AutoRotate)}
+              aria-pressed={!c3AutoRotate}
             >
-              {store.c3AutoRotate ? <Pause size={13} strokeWidth={1.5} /> : <Play size={13} strokeWidth={1.5} />}
-              <span>{store.c3AutoRotate ? "Pause rotation" : "Resume rotation"}</span>
+              {c3AutoRotate ? <Pause size={13} strokeWidth={1.5} /> : <Play size={13} strokeWidth={1.5} />}
+              <span>{c3AutoRotate ? "Pause rotation" : "Resume rotation"}</span>
             </button>
             {onHeroExitToStill && (
               <button type="button" className="btn btn-ghost btn-sm" onClick={onHeroExitToStill}>
@@ -466,19 +829,23 @@ export function PackCanvas({
 
         {/* Thermal Heatmap 5-stop dynamic legend overlay */}
         {effectiveHeatmapOn && effectiveResult && (
-          <ThermalLegend
+          <LiveThermalLegend
+            result={effectiveResult}
             minC={tempRangeC[0]}
             maxC={tempRangeC[1]}
-            hottestZoneId={sampleHotZoneId}
-            peakTempC={samplePeakC}
+            overrideSampleIndex={overrideSampleIndex}
+            defaultZoneId={pack.zones[0]?.id ?? "pack.zone_01"}
           />
         )}
 
-        {/* Hover label chip */}
-        {!compactHero && hoveredId && (
+        {/* Hover label chip (DOM-ref controlled, zero React re-renders) */}
+        {!compactHero && (
           <div
+            ref={hoverChipRef}
             className="mono-num"
             style={{
+              visibility: "hidden",
+              opacity: 0,
               position: "absolute",
               top: 10,
               left: 10,
@@ -489,34 +856,28 @@ export function PackCanvas({
               fontSize: "12px",
               pointerEvents: "none",
             }}
-          >
-            {pack.components.find((c) => c.id === hoveredId)?.name ?? hoveredId}
-          </div>
+          />
         )}
 
-        {/* Measured WebGL telemetry pill (M3-08) */}
-        {(localMetrics ?? (!syncId ? store.sceneRenderMetrics : null)) && (() => {
-          const m = localMetrics ?? store.sceneRenderMetrics!;
-          return (
-            <div
-              className="mono-num"
-              style={{
-                position: "absolute",
-                bottom: 10,
-                right: 10,
-                padding: "3px 8px",
-                borderRadius: "var(--radius-sm)",
-                background: "rgba(18, 22, 27, 0.88)",
-                border: "1px solid var(--color-border-subtle)",
-                fontSize: "11px",
-                color: "var(--color-text-muted)",
-                pointerEvents: "none",
-              }}
-            >
-              {m.drawCalls} calls · {m.triangles.toLocaleString()} tris · {m.lastFrameMs} ms
-            </div>
-          );
-        })()}
+        {/* Measured WebGL telemetry pill (DOM-ref controlled, zero React/store writes) */}
+        <div
+          ref={telemetryElRef}
+          className="mono-num"
+          style={{
+            position: "absolute",
+            bottom: 10,
+            right: 10,
+            padding: "3px 8px",
+            borderRadius: "var(--radius-sm)",
+            background: "rgba(18, 22, 27, 0.88)",
+            border: "1px solid var(--color-border-subtle)",
+            fontSize: "11px",
+            color: "var(--color-text-muted)",
+            pointerEvents: "none",
+          }}
+        >
+          initializing…
+        </div>
       </div>
 
       {!compactHero && (
@@ -537,24 +898,25 @@ export function PackCanvas({
               Explode
             </label>
             <input
+              ref={explodeSliderRef}
               id="c1-explode-slider"
               type="range"
               min={0}
               max={100}
-              value={store.explodePercent}
+              defaultValue={storeExplodePercent}
               onChange={(e) => {
                 setExplodePlaying(false);
-                store.setExplodePercent(Number(e.target.value));
+                useWorkspaceStore.getState().setExplodePercent(Number(e.target.value));
               }}
               style={{ width: "110px", accentColor: "var(--color-accent-primary)" }}
             />
-            <span className="mono-num" style={{ fontSize: "12px", width: "36px" }}>
-              {store.explodePercent}%
+            <span ref={explodeLabelRef} className="mono-num" style={{ fontSize: "12px", width: "36px" }}>
+              {storeExplodePercent}%
             </span>
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              onClick={() => setExplodePlaying((p) => !p)}
+              onClick={handleToggleExplodePlay}
             >
               {explodePlaying ? "Pause" : "Step stages"}
             </button>
@@ -563,36 +925,36 @@ export function PackCanvas({
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
             <button
               type="button"
-              className={`btn btn-sm ${store.crossSectionEnabled ? "btn-primary" : "btn-secondary"}`}
-              onClick={() => store.setCrossSection({ enabled: !store.crossSectionEnabled })}
-              aria-pressed={store.crossSectionEnabled}
+              className={`btn btn-sm ${crossSectionEnabled ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => useWorkspaceStore.getState().setCrossSection({ enabled: !crossSectionEnabled })}
+              aria-pressed={crossSectionEnabled}
             >
               <Scissors size={14} strokeWidth={1.5} aria-hidden="true" />
               <span>Cross-section</span>
             </button>
 
-            {store.crossSectionEnabled && (
+            {crossSectionEnabled && (
               <>
                 <input
                   aria-label="Cross-section X position"
                   type="range"
                   min={5}
                   max={95}
-                  value={Math.round(store.crossSectionPosition * 100)}
-                  onChange={(e) => store.setCrossSection({ position: Number(e.target.value) / 100 })}
+                  value={Math.round(crossSectionPosition * 100)}
+                  onChange={(e) => useWorkspaceStore.getState().setCrossSection({ position: Number(e.target.value) / 100 })}
                   style={{ width: "90px", accentColor: "var(--color-accent-primary)" }}
                 />
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
-                  onClick={() => store.setCrossSection({ flipped: !store.crossSectionFlipped })}
+                  onClick={() => useWorkspaceStore.getState().setCrossSection({ flipped: !crossSectionFlipped })}
                 >
                   Flip
                 </button>
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
-                  onClick={() => store.setCrossSection({ position: 0.5, flipped: false })}
+                  onClick={() => useWorkspaceStore.getState().setCrossSection({ position: 0.5, flipped: false })}
                 >
                   Mid
                 </button>
@@ -605,13 +967,20 @@ export function PackCanvas({
               disabled={effectiveResult === null}
               aria-pressed={effectiveHeatmapOn}
               title={effectiveResult === null ? "Run a simulation first." : "Toggle thermal heatmap (H)"}
-              onClick={() => store.setHeatmapEnabled(!store.heatmapEnabled)}
+              onClick={() => useWorkspaceStore.getState().setHeatmapEnabled(!storeHeatmapEnabled)}
             >
               <Thermometer size={14} strokeWidth={1.5} aria-hidden="true" />
               <span>Heatmap</span>
             </button>
 
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => store.resetAssembly()}>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => {
+                setExplodePlaying(false);
+                useWorkspaceStore.getState().resetAssembly();
+              }}
+            >
               Reset assembly
             </button>
           </div>
@@ -621,7 +990,7 @@ export function PackCanvas({
       {!compactHero && (
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--color-text-muted)", flexWrap: "wrap", gap: "4px" }}>
           <span>{UI_STRINGS.modelDisclaimer}</span>
-          {store.crossSectionEnabled && (
+          {crossSectionEnabled && (
             <span>Cross-section uses open shell clipping without mutating source geometry (Risk T3 outlined interior).</span>
           )}
         </div>
