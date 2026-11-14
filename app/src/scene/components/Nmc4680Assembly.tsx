@@ -7,6 +7,8 @@ import { computeExplodeOffsets } from "../controllers/explodeController";
 import { pickNmcCylinderCells } from "../controllers/instancedPicking";
 import { interpolateZoneTemperatures } from "../controllers/playbackController";
 import { CAD_COLORS, mapTemperatureToThermalColor } from "../materials/cadMaterials";
+import { TrayWalls } from "./TrayWalls";
+import { LidDetails } from "./LidDetails";
 import { SelectablePart } from "./SelectableMesh";
 
 const _dummy = new THREE.Object3D();
@@ -39,6 +41,7 @@ export const Nmc4680Assembly = React.memo(function Nmc4680Assembly({
 }: AssemblySceneProps): React.ReactElement {
   const { invalidate } = useThree();
   const layout = useMemo(() => buildNmcSceneLayout(pack), [pack]);
+  const wallM = (pack.envelopeMm.enclosureWallMm ?? 15) / 1000;
   const instRef = useRef<THREE.InstancedMesh>(null);
   const channelsGroupRef = useRef<THREE.Group>(null);
   const bmsGroupRef = useRef<THREE.Group>(null);
@@ -66,14 +69,20 @@ export const Nmc4680Assembly = React.memo(function Nmc4680Assembly({
         color: "#ffffff",
         roughness: 0.32,
         metalness: 0.74,
-        transparent: cellsDimmed,
-        opacity: cellsDimmed ? 0.35 : 1.0,
+        transparent: true, // constant: dimming only changes opacity, so selecting never compiles a new shader variant
+        opacity: 1.0,
         forceSinglePass: true,
         clippingPlanes,
         side,
       }),
-    [cellsDimmed, clippingPlanes, side]
+    [clippingPlanes, side]
   );
+
+  // Dimming mutates opacity on the same material (no new material => no shader recompile)
+  useLayoutEffect(() => {
+    cellMat.opacity = cellsDimmed ? 0.35 : 1.0;
+    invalidate();
+  }, [cellMat, cellsDimmed, invalidate]);
 
   useEffect(() => {
     return () => {
@@ -264,6 +273,21 @@ export const Nmc4680Assembly = React.memo(function Nmc4680Assembly({
         <boxGeometry args={[layout.packWidthX, 0.016, layout.packDepthZ]} />
       </SelectablePart>
 
+      {/* Perimeter tray walls (visual, from envelope) */}
+      <TrayWalls
+        lengthX={layout.packWidthX}
+        depthZ={layout.packDepthZ}
+        wallThickness={wallM}
+        height={lidBaseY - 0.006}
+        visible={visibility["pack.lower_enclosure"] !== false}
+        selectedId={selectedComponentId}
+        hoverBus={hoverBus}
+        heatmapEnabled={heatmapEnabled}
+        clippingPlanes={clippingPlanes}
+        onSelect={handleSelectSimple}
+        onHover={onHoverPart}
+      />
+
       {/* Instanced 828 NMC 4680 cylindrical cells */}
       <instancedMesh
         ref={instRef}
@@ -327,7 +351,7 @@ export const Nmc4680Assembly = React.memo(function Nmc4680Assembly({
         {/* Inlet & outlet manifold headers */}
         <SelectablePart
           componentId="pack.coolant_inlet"
-          position={[-layout.packWidthX / 2 + 0.015, ribbonBaseY, 0]}
+          position={[-(layout.packWidthX / 2 - wallM - 0.0065), ribbonBaseY, 0]}
           visible={visibility["pack.coolant_inlet"] !== false}
           selectedId={selectedComponentId}
           hoverBus={hoverBus}
@@ -337,12 +361,12 @@ export const Nmc4680Assembly = React.memo(function Nmc4680Assembly({
           onSelect={handleSelectSimple}
           onHover={onHoverPart}
         >
-          <boxGeometry args={[0.024, 0.036, layout.packDepthZ - 0.08]} />
+          <boxGeometry args={[0.012, 0.036, layout.packDepthZ - 0.08]} />
         </SelectablePart>
 
         <SelectablePart
           componentId="pack.coolant_outlet"
-          position={[layout.packWidthX / 2 - 0.015, ribbonBaseY, 0]}
+          position={[layout.packWidthX / 2 - wallM - 0.0065, ribbonBaseY, 0]}
           visible={visibility["pack.coolant_outlet"] !== false}
           selectedId={selectedComponentId}
           hoverBus={hoverBus}
@@ -352,7 +376,7 @@ export const Nmc4680Assembly = React.memo(function Nmc4680Assembly({
           onSelect={handleSelectSimple}
           onHover={onHoverPart}
         >
-          <boxGeometry args={[0.024, 0.036, layout.packDepthZ - 0.08]} />
+          <boxGeometry args={[0.012, 0.036, layout.packDepthZ - 0.08]} />
         </SelectablePart>
       </group>
 
@@ -366,8 +390,8 @@ export const Nmc4680Assembly = React.memo(function Nmc4680Assembly({
           hoverBus={hoverBus}
           heatmapEnabled={heatmapEnabled}
           baseColor={CAD_COLORS.busbarCopper}
-          roughness={0.28}
-          metalness={0.85}
+          roughness={0.48}
+          metalness={0.75}
           clippingPlanes={clippingPlanes}
           onSelect={handleSelectSimple}
           onHover={onHoverPart}
@@ -411,6 +435,20 @@ export const Nmc4680Assembly = React.memo(function Nmc4680Assembly({
         >
           <boxGeometry args={[layout.packWidthX, 0.012, layout.packDepthZ]} />
         </SelectablePart>
+        <LidDetails
+          lengthX={layout.packWidthX}
+          depthZ={layout.packDepthZ}
+          topY={lidBaseY + 0.006}
+          boltInset={wallM / 2}
+          visible={visibility["pack.upper_enclosure"] !== false}
+          dimmed={selectedComponentId !== null && selectedComponentId !== "pack.upper_enclosure"}
+          selectedId={selectedComponentId}
+          hoverBus={hoverBus}
+          heatmapEnabled={heatmapEnabled}
+          clippingPlanes={clippingPlanes}
+          onSelect={handleSelectSimple}
+          onHover={onHoverPart}
+        />
       </group>
     </group>
   );

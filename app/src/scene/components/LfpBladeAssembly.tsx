@@ -9,6 +9,8 @@ import { interpolateZoneTemperatures } from "../controllers/playbackController";
 import type { HoverBus } from "../controllers/sceneInteractionBus";
 import { CAD_COLORS, mapTemperatureToThermalColor } from "../materials/cadMaterials";
 import { SelectablePart } from "./SelectableMesh";
+import { TrayWalls } from "./TrayWalls";
+import { LidDetails } from "./LidDetails";
 
 export interface AssemblySceneProps {
   pack: PackDefinition;
@@ -61,11 +63,15 @@ export const LfpBladeAssembly = React.memo(function LfpBladeAssembly({
 }: AssemblySceneProps): React.ReactElement {
   const { invalidate } = useThree();
   const layout = useMemo(() => buildLfpSceneLayout(pack), [pack]);
+  const wallM = (pack.envelopeMm.enclosureWallMm ?? 12) / 1000;
   const instRef = useRef<THREE.InstancedMesh>(null);
   const timGroupRef = useRef<THREE.Group>(null);
   const plateGroupRef = useRef<THREE.Group>(null);
   const bmsGroupRef = useRef<THREE.Group>(null);
   const lidGroupRef = useRef<THREE.Group>(null);
+  const endWallLeftRef = useRef<THREE.Group>(null);
+  const endWallRightRef = useRef<THREE.Group>(null);
+  const sideWallsRef = useRef<THREE.Group>(null);
 
   const lastExplodeRef = useRef<number>(-1);
   const lastSpreadRef = useRef<number>(1.0);
@@ -88,14 +94,20 @@ export const LfpBladeAssembly = React.memo(function LfpBladeAssembly({
         color: "#ffffff",
         roughness: 0.36,
         metalness: 0.68,
-        transparent: cellsDimmed,
-        opacity: cellsDimmed ? 0.35 : 1.0,
+        transparent: true, // constant: dimming only changes opacity, so selecting never compiles a new shader variant
+        opacity: 1.0,
         forceSinglePass: true,
         clippingPlanes,
         side,
       }),
-    [cellsDimmed, clippingPlanes, side]
+    [clippingPlanes, side]
   );
+
+  // Dimming mutates opacity on the same material (no new material => no shader recompile)
+  useLayoutEffect(() => {
+    cellMat.opacity = cellsDimmed ? 0.35 : 1.0;
+    invalidate();
+  }, [cellMat, cellsDimmed, invalidate]);
 
   useEffect(() => {
     return () => {
@@ -114,6 +126,11 @@ export const LfpBladeAssembly = React.memo(function LfpBladeAssembly({
       if (plateGroupRef.current) plateGroupRef.current.position.y = offsets.lfpColdPlateY;
       if (bmsGroupRef.current) bmsGroupRef.current.position.y = offsets.bmsBusbarsY;
       if (lidGroupRef.current) lidGroupRef.current.position.y = offsets.upperEnclosureY;
+      // End walls slide outward with the blade spread so cells never pass through them
+      const endWallX = (layout.packWidthX / 2 - wallM / 2) * offsets.lfpCellSpreadFactor;
+      if (endWallLeftRef.current) endWallLeftRef.current.position.x = -endWallX;
+      if (endWallRightRef.current) endWallRightRef.current.position.x = endWallX;
+      if (sideWallsRef.current) sideWallsRef.current.scale.x = offsets.lfpCellSpreadFactor;
 
       if (!mesh) return;
       const spread = offsets.lfpCellSpreadFactor;
@@ -135,7 +152,7 @@ export const LfpBladeAssembly = React.memo(function LfpBladeAssembly({
       if (!mesh.boundingSphere) mesh.boundingSphere = new THREE.Sphere();
       cellsBoundsRef.current.getBoundingSphere(mesh.boundingSphere);
     },
-    [layout]
+    [layout, wallM]
   );
 
   const applyColors = useCallback(
@@ -290,6 +307,23 @@ export const LfpBladeAssembly = React.memo(function LfpBladeAssembly({
         <boxGeometry args={[layout.packWidthX, 0.016, layout.packDepthZ]} />
       </SelectablePart>
 
+      {/* Perimeter tray walls (visual, from envelope) */}
+      <TrayWalls
+        lengthX={layout.packWidthX}
+        depthZ={layout.packDepthZ}
+        wallThickness={wallM}
+        height={lidBaseY - 0.006}
+        visible={visibility["pack.lower_enclosure"] !== false}
+        selectedId={selectedComponentId}
+        hoverBus={hoverBus}
+        heatmapEnabled={heatmapEnabled}
+        clippingPlanes={clippingPlanes}
+        onSelect={handleSelectSimple}
+        onHover={onHoverPart}
+        endWallRefs={[endWallLeftRef, endWallRightRef]}
+        sideWallsRef={sideWallsRef}
+      />
+
       {/* Instanced 120 LFP blade cells */}
       <instancedMesh
         ref={instRef}
@@ -340,7 +374,7 @@ export const LfpBladeAssembly = React.memo(function LfpBladeAssembly({
           hoverBus={hoverBus}
           heatmapEnabled={heatmapEnabled}
           baseColor={CAD_COLORS.coolingPlate}
-          roughness={0.38}
+          roughness={0.5}
           metalness={0.72}
           clippingPlanes={clippingPlanes}
           onSelect={handleSelectSimple}
@@ -437,6 +471,20 @@ export const LfpBladeAssembly = React.memo(function LfpBladeAssembly({
         >
           <boxGeometry args={[layout.packWidthX, 0.012, layout.packDepthZ]} />
         </SelectablePart>
+        <LidDetails
+          lengthX={layout.packWidthX}
+          depthZ={layout.packDepthZ}
+          topY={lidBaseY + 0.006}
+          boltInset={wallM / 2}
+          visible={visibility["pack.upper_enclosure"] !== false}
+          dimmed={selectedComponentId !== null && selectedComponentId !== "pack.upper_enclosure"}
+          selectedId={selectedComponentId}
+          hoverBus={hoverBus}
+          heatmapEnabled={heatmapEnabled}
+          clippingPlanes={clippingPlanes}
+          onSelect={handleSelectSimple}
+          onHover={onHoverPart}
+        />
       </group>
     </group>
   );

@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
+import { tmpdir } from "node:os";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dirname, "../..");
 const APP_DIR = resolve(import.meta.dirname, "..");
 const STILLS_DIR = join(APP_DIR, "public/stills");
-const SCRATCH_DIR = "/Users/orl123456/.gemini/antigravity/brain/1527e4df-2e4d-44e1-87bc-c29e94c39b33/scratch/m3_renders";
+const SCRATCH_DIR = process.env.M3_SCRATCH_DIR ?? join(tmpdir(), "ev-m3-renders");
 
 mkdirSync(STILLS_DIR, { recursive: true });
 mkdirSync(SCRATCH_DIR, { recursive: true });
@@ -170,13 +171,18 @@ async function main() {
         );
         if (hasTelemetry) break;
       }
+      // Hide the engineering telemetry pill so it is never baked into the published stills
+      await cdp.eval(`(() => { const st = document.createElement('style'); st.textContent = '[data-telemetry]{display:none !important}'; document.head.appendChild(st); })()`);
       // Reset assembly cleanly so previous route's explode/cross-section state never leaks
       await cdp.eval(`(() => {
         const btns = [...document.querySelectorAll('button')];
         const rst = btns.find(b => b.textContent?.includes('Reset assembly'));
         if (rst) rst.click();
       })()`);
-      await sleep(800);
+      await sleep(1600);
+
+      const canvasRect = () =>
+        cdp.eval(`(() => { const r = document.querySelector('canvas')?.getBoundingClientRect(); return r ? { x: r.x, y: r.y, width: r.width, height: r.height } : null; })()`);
 
       const telemetryAssembled = await cdp.eval(`(() => {
         const text = document.body.innerText.match(/\\d+ calls · [\\d,]+ tris · [\\d.]+ ms/)?.[0] || null;
@@ -185,7 +191,7 @@ async function main() {
         return { text, rect: r ? { x: r.x, y: r.y, width: r.width, height: r.height } : null };
       })()`);
 
-      await cdp.screenshotPng(join(STILLS_DIR, `${prefix}-assembled.png`), telemetryAssembled.rect);
+      await cdp.screenshotPng(join(STILLS_DIR, `${prefix}-assembled.png`), await canvasRect());
       await cdp.screenshotPng(join(SCRATCH_DIR, `${prefix}_workspace_assembled.png`));
 
       // Drive Explode slider to 75% via React input value setter
@@ -197,8 +203,8 @@ async function main() {
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
       })()`);
-      await sleep(900);
-      await cdp.screenshotPng(join(STILLS_DIR, `${prefix}-exploded.png`), telemetryAssembled.rect);
+      await sleep(1600);
+      await cdp.screenshotPng(join(STILLS_DIR, `${prefix}-exploded.png`), await canvasRect());
 
       // Reset explode & toggle Cross-section ON
       await cdp.eval(`(() => {
@@ -213,8 +219,8 @@ async function main() {
         const cs = btns.find(b => b.textContent?.includes('Cross-section'));
         if (cs) cs.click();
       })()`);
-      await sleep(800);
-      await cdp.screenshotPng(join(STILLS_DIR, `${prefix}-cutaway.png`), telemetryAssembled.rect);
+      await sleep(1600);
+      await cdp.screenshotPng(join(STILLS_DIR, `${prefix}-cutaway.png`), await canvasRect());
 
       const telemetryAfter = await cdp.eval(
         `document.body.innerText.match(/\\d+ calls · [\\d,]+ tris · [\\d.]+ ms/)?.[0] || null`

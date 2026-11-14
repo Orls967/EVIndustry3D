@@ -103,7 +103,11 @@ export function buildNmcSceneLayout(pack: PackDefinition): NmcSceneLayout {
   const packDepthZ = pack.envelopeMm.widthZ / 1000.0;
 
   // Center rows in Z with side cooling ribbon slots between pairs of rows (12 parallel ribbons across 23 rows)
-  const ribbonThickness = 0.005;
+  // Row spacing is chosen so the whole array fits inside the tray walls:
+  // 23 rows x 46 mm + 12 ribbon gaps x 5 mm + 10 plain gaps x 0.5 mm = 1.123 m
+  // <= envelope 1.160 m - 2 x 15 mm walls = 1.130 m (visual layout only; no physics input).
+  const ribbonGapM = 0.005;
+  const plainGapM = 0.0005;
   const rowZPositions: number[] = [];
   const ribbonPositionsZ: number[] = [];
   let cursorZ = 0;
@@ -111,10 +115,10 @@ export function buildNmcSceneLayout(pack: PackDefinition): NmcSceneLayout {
     rowZPositions.push(cursorZ);
     const hasRibbonAfter = r % 2 === 0 && ribbonPositionsZ.length < pack.cooling.parallelChannels;
     if (hasRibbonAfter) {
-      ribbonPositionsZ.push(cursorZ + cellRadiusM + 0.002 + ribbonThickness / 2);
-      cursorZ += cellDiaM + 0.004 + ribbonThickness;
+      ribbonPositionsZ.push(cursorZ + cellRadiusM + ribbonGapM / 2);
+      cursorZ += cellDiaM + ribbonGapM;
     } else {
-      cursorZ += cellDiaM + 0.0015;
+      cursorZ += cellDiaM + plainGapM;
     }
   }
   const midZ = rowZPositions[rows - 1]! / 2;

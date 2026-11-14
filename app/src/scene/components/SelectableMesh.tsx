@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { useThree, type ThreeEvent } from "@react-three/fiber";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import type { HoverBus } from "../controllers/sceneInteractionBus";
 import { CAD_COLORS, HEATMAP_NON_THERMAL_HEX } from "../materials/cadMaterials";
 
@@ -28,25 +28,30 @@ export const SHARED_OUTLINE_MATERIAL = new THREE.LineBasicMaterial({
   toneMapped: false,
 });
 
-/** Pre-compiles SHARED_OUTLINE_MATERIAL on Canvas mount so the first hover has zero shader/PSO-compile stutter. */
-export function OutlineShaderPrewarm(): null {
-  const { gl, camera } = useThree();
-  useEffect(() => {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3));
-    const dummyScene = new THREE.Scene();
-    const lines = new THREE.LineSegments(geo, SHARED_OUTLINE_MATERIAL);
-    lines.frustumCulled = false;
-    dummyScene.add(lines);
-    const rt = new THREE.WebGLRenderTarget(1, 1);
-    const prevTarget = gl.getRenderTarget();
-    gl.setRenderTarget(rt);
-    gl.render(dummyScene, camera);
-    gl.setRenderTarget(prevTarget);
-    rt.dispose();
-    geo.dispose();
-  }, [gl, camera]);
-  return null;
+/** Zero-length segment drawn with SHARED_OUTLINE_MATERIAL during the first frames only, so the outline
+ *  program is compiled inside the real scene for the real screen target (gl.compile on a separate scene
+ *  produced a different program variant, and the first hover still stalled). */
+const _prewarmOutlineGeometry = (() => {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3));
+  return g;
+})();
+
+export function OutlineShaderPrewarm(): React.ReactElement {
+  const ref = useRef<THREE.LineSegments>(null);
+  const framesRef = useRef(0);
+  useFrame(() => {
+    if (ref.current && ref.current.visible && ++framesRef.current > 2) ref.current.visible = false;
+  });
+  return (
+    <lineSegments
+      ref={ref}
+      geometry={_prewarmOutlineGeometry}
+      material={SHARED_OUTLINE_MATERIAL}
+      frustumCulled={false}
+      raycast={_noopRaycast}
+    />
+  );
 }
 
 export const SelectablePart = React.memo(function SelectablePart({
@@ -68,6 +73,7 @@ export const SelectablePart = React.memo(function SelectablePart({
   const { invalidate } = useThree();
   const meshRef = useRef<THREE.Mesh>(null);
   const outlineRef = useRef<THREE.LineSegments>(null);
+  const edgeLineRef = useRef<THREE.LineSegments>(null);
   const builtForGeoRef = useRef<THREE.BufferGeometry | null>(null);
 
   const isSelected = selectedId === componentId;
@@ -83,7 +89,7 @@ export const SelectablePart = React.memo(function SelectablePart({
       color,
       roughness,
       metalness,
-      transparent: dimmed,
+      transparent: true, // constant: dimming only changes opacity (no shader recompile)
       opacity: dimmed ? 0.35 : 1.0,
       forceSinglePass: true,
       clippingPlanes,
@@ -91,6 +97,24 @@ export const SelectablePart = React.memo(function SelectablePart({
     }),
     [color, roughness, metalness, dimmed, clippingPlanes, side]
   );
+
+  // Subtle always-on CAD edge lines (same clipping as the part, hidden while dimmed)
+  const edgeMaterial = useMemo(
+    () =>
+      new THREE.LineBasicMaterial({
+        color: "#9aa7b4",
+        transparent: true,
+        opacity: 0.22,
+        depthWrite: false,
+        clippingPlanes,
+      }),
+    [clippingPlanes]
+  );
+  useEffect(() => () => edgeMaterial.dispose(), [edgeMaterial]);
+  // Dimming mutates opacity on the same material (no new material => no shader recompile)
+  useLayoutEffect(() => {
+    edgeMaterial.opacity = dimmed ? 0 : 0.22;
+  }, [edgeMaterial, dimmed]);
 
   // Build EdgesGeometry once per BufferGeometry instance and toggle .visible instead of mount/unmount
   useLayoutEffect(() => {
@@ -103,6 +127,7 @@ export const SelectablePart = React.memo(function SelectablePart({
     const edges = new THREE.EdgesGeometry(mesh.geometry, 15);
     outline.geometry.dispose();
     outline.geometry = edges;
+    if (edgeLineRef.current) edgeLineRef.current.geometry = edges;
   });
 
   useEffect(() => {
@@ -159,6 +184,7 @@ export const SelectablePart = React.memo(function SelectablePart({
     >
       {children}
       <meshStandardMaterial {...materialProps} />
+      <lineSegments ref={edgeLineRef} material={edgeMaterial} raycast={_noopRaycast} />
       <lineSegments
         ref={outlineRef}
         visible={false}

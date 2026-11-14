@@ -31,7 +31,8 @@ export function mapTemperatureToThermalColor(
 }
 
 export const CAD_COLORS = {
-  enclosureDark: "#36414f",
+  enclosureDark: "#46525f",
+  enclosureWall: "#56636f",
   enclosureInner: "#232b35",
   bladeCell: "#bcc7d4",
   bladeHeader: "#4b5764",
@@ -40,10 +41,11 @@ export const CAD_COLORS = {
   busbarCopper: "#cc8659",
   coolingPlate: "#6f8296",
   coolingGroove: "#305c70",
-  thermalInterface: "#8e9fae",
+  thermalInterface: "#7d8c99",
   bmsBoard: "#1f3040",
   bmsChip: "#81909e",
   portMetal: "#8d9ead",
+  hvConnector: "#d9792b",
   accentOutline: "#38c7e0",
 } as const;
 
@@ -61,7 +63,7 @@ export function createCadMaterial(
     color: colorHex,
     roughness: opts.roughness ?? 0.45,
     metalness: opts.metalness ?? 0.6,
-    transparent: Boolean(opts.dimmed),
+    transparent: true, // constant: dimming only changes opacity (no shader recompile)
     opacity: opts.dimmed ? 0.35 : 1.0,
     clippingPlanes: opts.clippingPlanes ?? [],
     clipShadows: false,

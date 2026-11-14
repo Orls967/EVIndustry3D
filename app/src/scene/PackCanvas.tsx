@@ -9,6 +9,7 @@ import { getPackDefinition } from "../domain/dataLoaders";
 import { useWorkspaceStore, type CameraPreset, type QualityTier } from "../state/workspaceStore";
 import { PackSchematicPoster } from "../ui/PackSchematicPoster";
 import { InlineBanner } from "../ui/Primitives";
+import { Environment, Lightformer } from "@react-three/drei";
 import { CameraRig, ClippingPlaneOverlay, type SharedCameraPose } from "./components/CameraAndClipControllers";
 import { LfpBladeAssembly } from "./components/LfpBladeAssembly";
 import { Nmc4680Assembly } from "./components/Nmc4680Assembly";
@@ -44,6 +45,24 @@ interface SceneAnimationDriversProps {
   onExplodeFinished: () => void;
   invalidateRef: React.MutableRefObject<(() => void) | null>;
 }
+
+/**
+ * Neutral studio lighting (02 §8: one key, soft fill, zero coloured lights).
+ * The environment map is rendered locally from white light panels (no HDR download), so metallic
+ * enclosures and cell cans show reflections instead of rendering near-black. Memoized with no props
+ * so parent re-renders never rebuild the environment map (which would force shader recompiles).
+ */
+const StudioEnvironment = React.memo(function StudioEnvironment(): React.ReactElement {
+  return (
+    <Environment resolution={256} frames={1}>
+      <Lightformer form="rect" intensity={1.5} position={[0, 5, 0]} rotation-x={Math.PI / 2} scale={[7, 7, 1]} />
+      <Lightformer form="rect" intensity={1.1} position={[-5, 1.6, 0.5]} rotation-y={Math.PI / 2} scale={[9, 1.6, 1]} />
+      <Lightformer form="rect" intensity={1.1} position={[5, 1.6, -0.5]} rotation-y={-Math.PI / 2} scale={[9, 1.6, 1]} />
+      <Lightformer form="rect" intensity={0.7} position={[0, 1.2, 5]} scale={[9, 1.4, 1]} />
+      <Lightformer form="rect" intensity={0.35} position={[0, 1.2, -5]} rotation-y={Math.PI} scale={[9, 1.4, 1]} />
+    </Environment>
+  );
+});
 
 function SceneAnimationDrivers({
   effectiveResult,
@@ -710,7 +729,7 @@ export function PackCanvas({
           frameloop="demand"
           events={createCanvasEvents}
           dpr={qualityTier === "low" ? 1 : [1, 2]}
-          camera={{ position: [1.5, 1.05, 1.5], fov: 40, near: 0.05, far: 40 }}
+          camera={{ position: [1.5, 1.05, 1.5], fov: compactHero ? 33 : 40, near: 0.05, far: 40 }}
           gl={{
             antialias: qualityTier !== "low",
             localClippingEnabled: true,
@@ -726,11 +745,11 @@ export function PackCanvas({
         >
           <color attach="background" args={["#0b0d10"]} />
           <OutlineShaderPrewarm />
-          {/* Neutral studio lighting (02 §8: one key, soft fill, zero coloured lights) */}
-          <ambientLight intensity={0.45} />
-          <hemisphereLight args={["#dfe7f0", "#1e2630", 0.72]} />
-          <directionalLight position={[3.5, 5.5, 4]} intensity={1.35} color="#ffffff" />
-          <directionalLight position={[-3.5, 2.5, -3.5]} intensity={0.68} color="#ffffff" />
+          <StudioEnvironment />
+          <ambientLight intensity={0.18} />
+          <hemisphereLight args={["#dfe7f0", "#1e2630", 0.35]} />
+          <directionalLight position={[3.5, 5.5, 4]} intensity={1.15} color="#ffffff" />
+          <directionalLight position={[-3.5, 2.5, -3.5]} intensity={0.45} color="#ffffff" />
 
           <SceneAnimationDrivers
             effectiveResult={effectiveResult}
@@ -867,10 +886,13 @@ export function PackCanvas({
           />
         )}
 
-        {/* Measured WebGL telemetry pill (DOM-ref controlled, zero React/store writes) */}
+        {/* Measured WebGL telemetry pill (DOM-ref controlled, zero React/store writes).
+            Engineering readout: shown in the workspace only, not on the landing hero or compare views. */}
         <div
           ref={telemetryElRef}
+          data-telemetry=""
           className="mono-num"
+          hidden={compactHero || Boolean(syncId)}
           style={{
             position: "absolute",
             bottom: 10,
