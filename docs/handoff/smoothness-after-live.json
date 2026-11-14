@@ -1,0 +1,110 @@
+{
+ "landingAutoRotate": {
+  "renders": 240,
+  "renderFps": 60,
+  "p50": 16.7,
+  "p95": 17.6,
+  "max": 18.3,
+  "gaps33": 0,
+  "gaps50": 0,
+  "loafCount": 0,
+  "loafWorst": []
+ },
+ "lfpAutoOrbit": {
+  "renders": 240,
+  "renderFps": 60,
+  "p50": 16.7,
+  "p95": 17.5,
+  "max": 18.8,
+  "gaps33": 0,
+  "gaps50": 0,
+  "loafCount": 0,
+  "loafWorst": []
+ },
+ "nmcAutoOrbit": {
+  "renders": 240,
+  "renderFps": 60,
+  "p50": 16.7,
+  "p95": 17,
+  "max": 17.3,
+  "gaps33": 0,
+  "gaps50": 0,
+  "loafCount": 0,
+  "loafWorst": []
+ },
+ "nmcHover": {
+  "renders": 180,
+  "renderFps": 60.1,
+  "p50": 16.5,
+  "p95": 18,
+  "max": 46.3,
+  "gaps33": 1,
+  "gaps50": 0,
+  "loafCount": 0,
+  "loafWorst": []
+ },
+ "nmcDrag": {
+  "renders": 180,
+  "renderFps": 59.7,
+  "p50": 16.6,
+  "p95": 17.9,
+  "max": 39.4,
+  "gaps33": 1,
+  "gaps50": 0,
+  "loafCount": 1,
+  "loafWorst": [
+   {
+    "d": 55,
+    "b": 0,
+    "s": [
+     "@three-CSXGxhrc.js:5",
+     "zv@three-CSXGxhrc.js:40"
+    ]
+   }
+  ]
+ },
+ "nmcExplodePlay": {
+  "renders": 181,
+  "renderFps": 60,
+  "p50": 16.7,
+  "p95": 17.1,
+  "max": 17.1,
+  "gaps33": 0,
+  "gaps50": 0,
+  "loafCount": 0,
+  "loafWorst": []
+ },
+ "nmcHeatmapPlayback": {
+  "renders": 56,
+  "renderFps": 13.8,
+  "p50": 109.1,
+  "p95": 134.3,
+  "max": 134.8,
+  "gaps33": 31,
+  "gaps50": 31,
+  "loafCount": 0,
+  "loafWorst": []
+ },
+ "compare": {
+  "renders": 0,
+  "renderFps": 0,
+  "p50": null,
+  "p95": null,
+  "max": null,
+  "gaps33": 0,
+  "gaps50": 0,
+  "loafCount": 0,
+  "loafWorst": []
+ },
+ "compareDrag": {
+  "renders": 181,
+  "renderFps": 60.2,
+  "p50": 16.6,
+  "p95": 17.4,
+  "max": 17.8,
+  "gaps33": 0,
+  "gaps50": 0,
+  "loafCount": 0,
+  "loafWorst": []
+ }
+}

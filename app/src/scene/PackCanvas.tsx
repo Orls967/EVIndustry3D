@@ -57,14 +57,26 @@ function SceneAnimationDrivers({
   onExplodeFinished,
   invalidateRef,
 }: SceneAnimationDriversProps): null {
-  const { invalidate } = useThree();
+  const invalidate = useThree((s) => s.invalidate);
+  const setFrameloop = useThree((s) => s.setFrameloop);
   invalidateRef.current = invalidate;
 
+  const isContinuousAnimating =
+    Boolean(playbackPlaying && effectiveResult && effectiveResult.nSamples > 1) || explodePlaying;
+
+  // Switch R3F to continuous "always" loop while heatmap playback or explode is active
+  // so animation frames never stall on demand-mode internal.frames races; restore "demand" when idle.
   useEffect(() => {
-    if (playbackPlaying || explodePlaying) {
+    if (isContinuousAnimating) {
+      setFrameloop("always");
       invalidate();
+      return () => {
+        setFrameloop("demand");
+      };
     }
-  }, [playbackPlaying, explodePlaying, invalidate]);
+    setFrameloop("demand");
+    return undefined;
+  }, [isContinuousAnimating, setFrameloop, invalidate]);
 
   useFrame((_, delta) => {
     const deltaMs = Math.min(delta * 1000, 100);
@@ -82,7 +94,6 @@ function SceneAnimationDrivers({
         lastCommittedSampleRef.current = intIdx;
         useWorkspaceStore.getState().setPlaybackSampleIndex(intIdx);
       }
-      invalidate();
     }
 
     if (explodePlaying) {
@@ -95,11 +106,10 @@ function SceneAnimationDrivers({
       if (explodeLabelRef.current) {
         explodeLabelRef.current.textContent = `${rounded}%`;
       }
-      if (nextPct < 100) {
-        invalidate();
-      } else {
+      if (nextPct >= 100) {
         useWorkspaceStore.getState().setExplodePercent(100);
         onExplodeFinished();
+        invalidate();
       }
     }
   });
@@ -197,11 +207,9 @@ const PackLiveRegion = React.memo(function PackLiveRegion({
     hotZoneId = effectiveResult.zoneIds[info.hotZoneIndex] ?? effectiveResult.summary.hottestZoneId ?? defaultZoneId;
   }
 
-  const liveAnnouncement = `${packDisplayName}. Explode ${effectiveExplodePct}%. Cross-section ${
-    crossSectionEnabled ? `enabled at ${Math.round(crossSectionPosition * 100)}%` : "off"
-  }. Heatmap ${
-    effectiveHeatmapOn && effectiveResult ? `on, maximum ${peakC.toFixed(1)} °C in ${hotZoneId}` : "off"
-  }.${selectedComponentId ? ` Selected ${selectedCellId ?? selectedComponentId}.` : ""}`;
+  const liveAnnouncement = `${packDisplayName}. Explode ${effectiveExplodePct}%. Cross-section ${crossSectionEnabled ? `enabled at ${Math.round(crossSectionPosition * 100)}%` : "off"
+    }. Heatmap ${effectiveHeatmapOn && effectiveResult ? `on, maximum ${peakC.toFixed(1)} °C in ${hotZoneId}` : "off"
+    }.${selectedComponentId ? ` Selected ${selectedCellId ?? selectedComponentId}.` : ""}`;
 
   return (
     <div className="sr-only" aria-live="polite">
